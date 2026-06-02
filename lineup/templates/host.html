@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block title %}🎵 Rhythm N Boost - Host Control Panel{% endblock %}
+
+{% block content %}
+<nav class="top-nav">
+    <div class="nav-brand">
+        <span class="nav-logo">🎵</span>
+        <span class="nav-title">RNB Host</span>
+    </div>
+    <div class="nav-actions">
+        {% if request.user.is_staff %}
+            <a href="{% url 'lineup:admin_panel' %}" class="nav-link">Admin Panel</a>
+        {% endif %}
+        <a href="{% url 'lineup:index' %}" class="nav-link">Participant View</a>
+        <span class="nav-user">{{ request.user.username }}</span>
+        <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
+    </div>
+</nav>
+
+<div class="host-container">
+    <header class="host-header">
+        <div class="glow-text">
+            <h1>🎵 HOST CONTROL PANEL 🎵</h1>
+            <p class="subtitle">Rhythm N Boost Auto Lineup</p>
+        </div>
+    </header>
+
+    <div class="host-controls">
+        <div class="control-buttons">
+            <button class="btn btn-success btn-large" onclick="nextParticipant()">
+                <span class="btn-icon">⏭️</span> NEXT PERFORMER
+            </button>
+            <button class="btn btn-danger btn-large" onclick="clearAll()">
+                <span class="btn-icon">🗑️</span> CLEAR QUEUE
+            </button>
+        </div>
+
+        <div id="currentPerformer" class="current-performer">
+            <p class="performer-label">Now Performing:</p>
+            <p class="performer-name">—</p>
+        </div>
+    </div>
+
+    <div class="host-content">
+        <div class="queue-panel">
+            <h2 class="panel-title">🎤 Active Queue ({{ queue.count }})</h2>
+            <div class="queue-container">
+                <div id="activeQueue" class="active-queue">
+                    {% for participant in queue %}
+                        <div class="queue-card" data-name="{{ participant.screen_name }}">
+                            <div class="card-position">{{ participant.position }}</div>
+                            <div class="card-content">
+                                <p class="card-name">{{ participant.screen_name }}</p>
+                                <p class="card-time">Added: {{ participant.added_at|date:"H:i:s" }}</p>
+                            </div>
+                            <button class="btn-remove" onclick="removeParticipant('{{ participant.screen_name }}')">✕</button>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">
+                            <p class="empty-icon">🎉</p>
+                            <p class="empty-text">Queue is empty - Ready for action!</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="completed-panel">
+            <h2 class="panel-title">✅ Completed ({{ completed.count }})</h2>
+            <div class="queue-container completed-container">
+                <div id="completedList" class="completed-list">
+                    {% for participant in completed %}
+                        <div class="completed-card">
+                            <span class="completed-name">{{ participant.screen_name }}</span>
+                            <span class="completed-check">✓</span>
+                        </div>
+                    {% empty %}
+                        <p style="text-align: center; color: #888; padding: 20px;">No one completed yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-section">
+        <div class="stat-box">
+            <p class="stat-label">Total in Queue</p>
+            <p class="stat-value" id="queueCount">{{ queue.count }}</p>
+        </div>
+        <div class="stat-box">
+            <p class="stat-label">Completed</p>
+            <p class="stat-value" id="completedCount">{{ completed.count }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPerformer = null;
+
+    async function nextParticipant() {
+        try {
+            const response = await fetch('/api/next/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                currentPerformer = data.current;
+                updateCurrentPerformer(data.current);
+                updateQueue(data.queue);
+                playSound('next');
+                showNotification(`🎤 ${data.current} is up next!`);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            showNotification('Connection error! 😞', 'error');
+        }
+    }
+
+    async function clearAll() {
+        if (confirm('🗑️ Clear the entire queue? This cannot be undone!')) {
+            try {
+                const response = await fetch('/api/clear/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateQueue([]);
+                    currentPerformer = null;
+                    updateCurrentPerformer(null);
+                    showNotification('✨ Queue cleared!');
+                    playSound('clear');
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Connection error! 😞', 'error');
+            }
+        }
+    }
+
+    async function removeParticipant(screenName) {
+        if (confirm(`Remove ${screenName} from queue?`)) {
+            try {
+                const response = await fetch('/api/remove/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ screen_name: screenName })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    updateQueue(data.queue);
+                    showNotification(`Removed ${screenName}`);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Connection error! 😞', 'error');
+            }
+        }
+    }
+
+    function updateQueue(queue) {
+        const activeQueue = document.getElementById('activeQueue');
+        const queueCount = document.getElementById('queueCount');
+        
+        queueCount.textContent = queue.length;
+
+        if (queue.length === 0) {
+            activeQueue.innerHTML = `
+                <div class="empty-state">
+                    <p class="empty-icon">🎉</p>
+                    <p class="empty-text">Queue is empty - Ready for action!</p>
+                </div>
+            `;
+            return;
+        }
+
+        activeQueue.innerHTML = queue.map((name, index) => `
+            <div class="queue-card" data-name="${name}">
+                <div class="card-position">${index + 1}</div>
+                <div class="card-content">
+                    <p class="card-name">${name}</p>
+                    <p class="card-time">Waiting...</p>
+                </div>
+                <button class="btn-remove" onclick="removeParticipant('${name}')">✕</button>
+            </div>
+        `).join('');
+    }
+
+    function updateCurrentPerformer(name) {
+        const performerName = document.querySelector('.performer-name');
+        if (name) {
+            performerName.textContent = name;
+            performerName.style.animation = 'pulse 0.5s ease-in-out';
+        } else {
+            performerName.textContent = '—';
+        }
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    function playSound(type) {
+        // Create a simple beep sound using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        if (type === 'next') {
+            oscillator.frequency.value = 800;
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+    }
+
+    // Refresh queue every 2 seconds
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/queue/');
+            const data = await response.json();
+            updateQueue(data.queue);
+        } catch (error) {
+            console.error('Error fetching queue:', error);
+        }
+    }, 2000);
+</script>
+{% endblock %}

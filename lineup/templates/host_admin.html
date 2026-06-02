@@ -1,0 +1,623 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}🎵 Rhythm N Boost - {% if request.user.is_staff %}Admin{% else %}Host{% endif %} Panel{% endblock %}
+
+{% block content %}
+<nav class="top-nav">
+    <div class="nav-brand">
+        <span class="nav-logo">🎵</span>
+        <span class="nav-title">RNB {% if request.user.is_staff %}Admin{% else %}Host{% endif %}</span>
+    </div>
+    <div class="nav-actions">
+        <a href="{% url 'lineup:index' %}" class="nav-link">Participant View</a>
+        <span class="nav-user">{{ request.user.username }}</span>
+        <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
+    </div>
+</nav>
+
+<div class="host-admin-wrapper">
+
+    <!-- HEADER -->
+    <header class="host-header">
+        <div class="glow-text">
+            <h1>🎵 {% if request.user.is_staff %}ADMIN{% else %}HOST{% endif %} CONTROL PANEL 🎵</h1>
+            <p class="subtitle">Rhythm N Boost Auto Lineup</p>
+        </div>
+    </header>
+
+    <!-- HOST CONTROLS BAR -->
+    <div class="host-controls">
+        <div class="control-buttons">
+            <button class="btn btn-success btn-large" onclick="nextParticipant()">
+                <span class="btn-icon">⏭️</span> NEXT PERFORMER
+            </button>
+            <button class="btn btn-danger btn-large" onclick="clearAll()">
+                <span class="btn-icon">🗑️</span> CLEAR QUEUE
+            </button>
+        </div>
+        <div class="current-performer">
+            <p class="performer-label">Now Performing:</p>
+            <p class="performer-name" id="performerName">—</p>
+        </div>
+    </div>
+
+    <!-- ACTIVE QUEUE + COMPLETED -->
+    <div class="host-content">
+        <div class="queue-panel">
+            <h2 class="panel-title">🎤 Active Queue (<span id="queueCount">{{ queue.count }}</span>)</h2>
+            <div class="queue-container">
+                <div id="activeQueue" class="active-queue">
+                    {% for participant in queue %}
+                        <div class="queue-card" data-name="{{ participant.screen_name }}">
+                            <div class="card-position">{{ forloop.counter }}</div>
+                            <div class="card-content">
+                                <p class="card-name">{{ participant.screen_name }}</p>
+                                <p class="card-time">Added: {{ participant.added_at|date:"H:i:s" }}</p>
+                            </div>
+                            <button class="btn-remove" onclick="removeParticipant('{{ participant.screen_name }}')">✕</button>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">
+                            <p class="empty-icon">🎉</p>
+                            <p class="empty-text">Queue is empty - Ready for action!</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="completed-panel">
+            <h2 class="panel-title">✅ Completed (<span id="completedCount">{{ completed.count }}</span>)</h2>
+            <div class="queue-container completed-container">
+                <div id="completedList" class="completed-list">
+                    {% for participant in completed %}
+                        <div class="completed-card">
+                            <span class="completed-name">{{ participant.screen_name }}</span>
+                            <span class="completed-check">✓</span>
+                        </div>
+                    {% empty %}
+                        <p class="no-completed-text">No one completed yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-section">
+        <div class="stat-box">
+            <p class="stat-label">Total in Queue</p>
+            <p class="stat-value" id="statQueueCount">{{ queue.count }}</p>
+        </div>
+        <div class="stat-box">
+            <p class="stat-label">Completed</p>
+            <p class="stat-value" id="statCompletedCount">{{ completed.count }}</p>
+        </div>
+    </div>
+
+    {% if request.user.is_staff %}
+    <!-- ADMIN MANAGEMENT SECTION -->
+    <div class="admin-divider">
+        <span class="admin-divider-text">⚙️ ADMIN MANAGEMENT</span>
+    </div>
+
+    <div class="admin-section">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchAdminTab('allqueues', this)">All Queues</button>
+            <button class="tab-btn" onclick="switchAdminTab('sessions', this)">Sessions</button>
+            <button class="tab-btn" onclick="switchAdminTab('users', this)">Users</button>
+        </div>
+
+        <!-- ALL QUEUES TAB -->
+        <div id="admin-tab-allqueues" class="tab-content active">
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <h3 class="card-title">Active Participants (All Sessions)</h3>
+                    <div id="adminActiveTableWrapper" class="participant-table-wrapper">
+                        {% if active_participants %}
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>#</th><th>Name</th><th>Session</th><th>Joined</th><th>Action</th></tr>
+                                </thead>
+                                <tbody id="adminActiveTableBody">
+                                    {% for p in active_participants %}
+                                    <tr data-name="{{ p.screen_name }}">
+                                        <td><span class="position-badge">{{ p.position }}</span></td>
+                                        <td class="name-cell">{{ p.screen_name }}</td>
+                                        <td><span class="session-tag">{{ p.session.name }}</span></td>
+                                        <td class="time-cell">{{ p.added_at|date:"H:i" }}</td>
+                                        <td><button class="btn-table-danger" onclick="adminRemoveFromQueue('{{ p.screen_name }}')">Remove</button></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <div class="empty-state">
+                                <p class="empty-icon">🎉</p>
+                                <p class="empty-text">No active participants</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <div class="card-title-row">
+                        <h3 class="card-title">Completed (All Sessions)</h3>
+                        <button class="btn-sm btn-danger" onclick="clearAllCompleted()">Clear All</button>
+                    </div>
+                    <div id="adminCompletedWrapper" class="participant-table-wrapper">
+                        {% if completed_participants %}
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Session</th></tr>
+                                </thead>
+                                <tbody id="adminCompletedTableBody">
+                                    {% for p in completed_participants %}
+                                    <tr>
+                                        <td class="name-cell">{{ p.screen_name }}</td>
+                                        <td><span class="session-tag">{{ p.session.name }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <div class="empty-state">
+                                <p class="empty-icon">✅</p>
+                                <p class="empty-text">No completed participants</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SESSIONS TAB -->
+        <div id="admin-tab-sessions" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Sessions</h2>
+                <button class="btn btn-primary" onclick="showCreateSession()">+ New Session</button>
+            </div>
+            <div id="createSessionForm" class="inline-form" style="display:none;">
+                <input type="text" id="newSessionName" class="input-field inline-input" placeholder="Session name (e.g. Main Room)">
+                <button class="btn btn-success" onclick="createSession()">Create</button>
+                <button class="btn btn-outline" onclick="hideCreateSession()">Cancel</button>
+            </div>
+            <div id="sessionsList" class="sessions-grid">
+                {% for session in sessions %}
+                <div class="session-card" id="session-{{ session.id }}">
+                    <div class="session-card-header">
+                        <span class="session-name">{{ session.name }}</span>
+                        <span class="session-created">{{ session.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <div class="session-stats">
+                        <span class="stat-pill">{{ session.total_count }} total</span>
+                        <span class="stat-pill active-pill">{{ session.active_count }} active</span>
+                    </div>
+                    <div class="session-actions">
+                        <button class="btn-sm btn-danger" onclick="deleteSession({{ session.id }}, '{{ session.name }}')">Delete Session</button>
+                        <button class="btn-sm btn-outline" onclick="clearCompleted({{ session.id }})">Clear Completed</button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <p class="empty-icon">📋</p>
+                    <p class="empty-text">No sessions yet. Create one above.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- USERS TAB -->
+        <div id="admin-tab-users" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Registered Users</h2>
+                <a href="{% url 'lineup:register' %}" class="btn btn-primary">+ Add User</a>
+            </div>
+            <div class="admin-card">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Username</th><th>Joined</th><th>Role</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr id="user-row-{{ user.id }}">
+                            <td class="name-cell">
+                                {{ user.username }}
+                                {% if user == request.user %}<span class="you-badge">you</span>{% endif %}
+                            </td>
+                            <td class="time-cell">{{ user.date_joined|date:"M d, Y" }}</td>
+                            <td>
+                                <span id="role-badge-{{ user.id }}" class="role-badge {% if user.is_staff %}role-admin{% else %}role-host{% endif %}">
+                                    {% if user.is_staff %}Admin{% else %}Host{% endif %}
+                                </span>
+                            </td>
+                            <td class="actions-cell">
+                                {% if user != request.user %}
+                                    <button id="toggle-btn-{{ user.id }}" class="btn-sm btn-outline" onclick="toggleStaff({{ user.id }})">
+                                        {% if user.is_staff %}Remove Admin{% else %}Make Admin{% endif %}
+                                    </button>
+                                    <button class="btn-sm btn-danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')">Delete</button>
+                                {% else %}
+                                    <span class="muted-text">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" style="text-align:center;padding:20px;color:rgba(255,255,255,0.4);">No users registered.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+const IS_STAFF = {% if request.user.is_staff %}true{% else %}false{% endif %};
+
+// ===== HTML ESCAPING =====
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+// ===== HOST CONTROLS =====
+
+async function nextParticipant() {
+    try {
+        const res = await fetch('/api/next/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+        });
+        const data = await res.json();
+        if (data.success) {
+            const nameEl = document.getElementById('performerName');
+            nameEl.textContent = data.current;
+            nameEl.style.animation = 'none';
+            setTimeout(() => { nameEl.style.animation = 'pulse 0.5s ease-in-out'; }, 10);
+            showNotification(`🎤 ${data.current} is up next!`);
+            await refreshState();
+            if (IS_STAFF) await refreshAdminState();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error! 😞', 'error');
+    }
+}
+
+async function clearAll() {
+    if (!confirm('🗑️ Clear the entire queue? This cannot be undone!')) return;
+    try {
+        const res = await fetch('/api/clear/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('performerName').textContent = '—';
+            showNotification('✨ Queue cleared!');
+            await refreshState();
+            if (IS_STAFF) await refreshAdminState();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error! 😞', 'error');
+    }
+}
+
+async function removeParticipant(screenName) {
+    if (!confirm(`Remove ${screenName} from queue?`)) return;
+    try {
+        const res = await fetch('/api/remove/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({screen_name: screenName})
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`Removed ${screenName}`);
+            await refreshState();
+            if (IS_STAFF) await refreshAdminState();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error! 😞', 'error');
+    }
+}
+
+// ===== STATE REFRESH (host section) =====
+
+async function refreshState() {
+    try {
+        const res = await fetch('/api/full-state/');
+        const data = await res.json();
+        renderActiveQueue(data.queue);
+        renderCompletedList(data.completed);
+        document.getElementById('queueCount').textContent = data.queue_count;
+        document.getElementById('completedCount').textContent = data.completed_count;
+        document.getElementById('statQueueCount').textContent = data.queue_count;
+        document.getElementById('statCompletedCount').textContent = data.completed_count;
+    } catch (e) {
+        console.error('State refresh error:', e);
+    }
+}
+
+function renderActiveQueue(queue) {
+    const el = document.getElementById('activeQueue');
+    if (queue.length === 0) {
+        el.innerHTML = `<div class="empty-state"><p class="empty-icon">🎉</p><p class="empty-text">Queue is empty - Ready for action!</p></div>`;
+        return;
+    }
+    el.innerHTML = queue.map((p, i) => `
+        <div class="queue-card" data-name="${esc(p.name)}">
+            <div class="card-position">${i + 1}</div>
+            <div class="card-content">
+                <p class="card-name">${esc(p.name)}</p>
+                <p class="card-time">Added: ${esc(p.added_at)}</p>
+            </div>
+            <button class="btn-remove" onclick="removeParticipant('${esc(p.name)}')">✕</button>
+        </div>
+    `).join('');
+}
+
+function renderCompletedList(completed) {
+    const el = document.getElementById('completedList');
+    if (completed.length === 0) {
+        el.innerHTML = `<p class="no-completed-text">No one completed yet</p>`;
+        return;
+    }
+    el.innerHTML = completed.map(name => `
+        <div class="completed-card">
+            <span class="completed-name">${esc(name)}</span>
+            <span class="completed-check">✓</span>
+        </div>
+    `).join('');
+}
+
+// Auto-poll host section every 2 seconds
+setInterval(refreshState, 2000);
+
+// ===== ADMIN STATE REFRESH =====
+
+{% if request.user.is_staff %}
+
+async function refreshAdminState() {
+    try {
+        const res = await fetch('/api/admin-state/');
+        const data = await res.json();
+        renderAdminActiveTable(data.active);
+        renderAdminCompletedTable(data.completed);
+    } catch (e) {
+        console.error('Admin state refresh error:', e);
+    }
+}
+
+function renderAdminActiveTable(active) {
+    const wrapper = document.getElementById('adminActiveTableWrapper');
+    if (active.length === 0) {
+        wrapper.innerHTML = `<div class="empty-state"><p class="empty-icon">🎉</p><p class="empty-text">No active participants</p></div>`;
+        return;
+    }
+    const rows = active.map(p => `
+        <tr data-name="${esc(p.name)}">
+            <td><span class="position-badge">${esc(String(p.position))}</span></td>
+            <td class="name-cell">${esc(p.name)}</td>
+            <td><span class="session-tag">${esc(p.session)}</span></td>
+            <td class="time-cell">${esc(p.added_at)}</td>
+            <td><button class="btn-table-danger" onclick="adminRemoveFromQueue('${esc(p.name)}')">Remove</button></td>
+        </tr>
+    `).join('');
+    wrapper.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Name</th><th>Session</th><th>Joined</th><th>Action</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
+
+function renderAdminCompletedTable(completed) {
+    const wrapper = document.getElementById('adminCompletedWrapper');
+    if (completed.length === 0) {
+        wrapper.innerHTML = `<div class="empty-state"><p class="empty-icon">✅</p><p class="empty-text">No completed participants</p></div>`;
+        return;
+    }
+    const rows = completed.map(p => `
+        <tr>
+            <td class="name-cell">${esc(p.name)}</td>
+            <td><span class="session-tag">${esc(p.session)}</span></td>
+        </tr>
+    `).join('');
+    wrapper.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Name</th><th>Session</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
+
+// Auto-poll admin section every 3 seconds
+setInterval(refreshAdminState, 3000);
+
+// ===== ADMIN ACTIONS =====
+
+async function adminRemoveFromQueue(screenName) {
+    if (!confirm(`Remove ${screenName} from queue?`)) return;
+    const res = await fetch('/api/remove/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({screen_name: screenName})
+    });
+    const data = await res.json();
+    if (data.success) {
+        showNotification(`Removed ${screenName}`);
+        await Promise.all([refreshState(), refreshAdminState()]);
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+async function clearAllCompleted() {
+    if (!confirm('Clear all completed participants across all sessions?')) return;
+    const res = await fetch('/admin-panel/clear-completed/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) {
+        showNotification('Cleared all completed participants');
+        await Promise.all([refreshState(), refreshAdminState()]);
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+async function clearCompleted(sessionId) {
+    if (!confirm('Clear completed participants for this session?')) return;
+    const res = await fetch('/admin-panel/clear-completed/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: sessionId})
+    });
+    const data = await res.json();
+    if (data.success) {
+        showNotification('Completed participants cleared');
+        await Promise.all([refreshState(), refreshAdminState()]);
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+function showCreateSession() {
+    document.getElementById('createSessionForm').style.display = 'flex';
+    document.getElementById('newSessionName').focus();
+}
+
+function hideCreateSession() {
+    document.getElementById('createSessionForm').style.display = 'none';
+    document.getElementById('newSessionName').value = '';
+}
+
+async function createSession() {
+    const name = document.getElementById('newSessionName').value.trim();
+    if (!name) { showNotification('Session name is required.', 'error'); return; }
+    const res = await fetch('/admin-panel/create-session/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name})
+    });
+    const data = await res.json();
+    if (data.success) {
+        showNotification(`Session "${data.session.name}" created`);
+        hideCreateSession();
+        const grid = document.getElementById('sessionsList');
+        const emptyState = grid.querySelector('.empty-state');
+        if (emptyState) emptyState.remove();
+        const card = document.createElement('div');
+        card.className = 'session-card';
+        card.id = 'session-' + data.session.id;
+        const safeName = esc(data.session.name);
+        const safeId = data.session.id;
+        card.innerHTML = `
+            <div class="session-card-header">
+                <span class="session-name">${safeName}</span>
+                <span class="session-created">Just now</span>
+            </div>
+            <div class="session-stats">
+                <span class="stat-pill">0 total</span>
+                <span class="stat-pill active-pill">0 active</span>
+            </div>
+            <div class="session-actions">
+                <button class="btn-sm btn-danger" onclick="deleteSession(${safeId}, '${safeName}')">Delete Session</button>
+                <button class="btn-sm btn-outline" onclick="clearCompleted(${safeId})">Clear Completed</button>
+            </div>`;
+        grid.prepend(card);
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+async function deleteSession(sessionId, name) {
+    if (!confirm(`Delete session "${name}" and all its participants? This cannot be undone.`)) return;
+    const res = await fetch('/admin-panel/delete-session/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: sessionId})
+    });
+    const data = await res.json();
+    if (data.success) {
+        showNotification(`Session "${name}" deleted`);
+        document.getElementById('session-' + sessionId)?.remove();
+        await Promise.all([refreshState(), refreshAdminState()]);
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+async function toggleStaff(userId) {
+    const res = await fetch('/admin-panel/toggle-staff/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userId})
+    });
+    const data = await res.json();
+    if (data.success) {
+        const badge = document.getElementById('role-badge-' + userId);
+        const btn = document.getElementById('toggle-btn-' + userId);
+        if (data.is_staff) {
+            badge.textContent = 'Admin';
+            badge.className = 'role-badge role-admin';
+            btn.textContent = 'Remove Admin';
+        } else {
+            badge.textContent = 'Host';
+            badge.className = 'role-badge role-host';
+            btn.textContent = 'Make Admin';
+        }
+        showNotification('Role updated');
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+async function deleteUser(userId, username) {
+    if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+    const res = await fetch('/admin-panel/delete-user/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userId})
+    });
+    const data = await res.json();
+    if (data.success) {
+        showNotification(`User "${username}" deleted`);
+        document.getElementById('user-row-' + userId)?.remove();
+    } else {
+        showNotification(data.message, 'error');
+    }
+}
+
+function switchAdminTab(tab, btn) {
+    document.querySelectorAll('[id^="admin-tab-"]').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-nav .tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('admin-tab-' + tab).classList.add('active');
+    btn.classList.add('active');
+}
+
+{% endif %}
+
+// ===== NOTIFICATION =====
+
+function showNotification(message, type = 'success') {
+    const n = document.createElement('div');
+    n.className = `notification ${type}`;
+    n.textContent = message;
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 3000);
+}
+</script>
+{% endblock %}

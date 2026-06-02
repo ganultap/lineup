@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}🎵 Rhythm N Boost - Join the Lineup{% endblock %}
+
+{% block content %}
+<nav class="top-nav">
+    <div class="nav-brand">
+        <span class="nav-logo">🎵</span>
+        <span class="nav-title">RNB Lineup</span>
+    </div>
+    <div class="nav-actions">
+        <a href="{% url 'lineup:host' %}" class="nav-link">{% if request.user.is_staff %}Admin Panel{% else %}Host Panel{% endif %}</a>
+        <span class="nav-user">{{ request.user.username }}</span>
+        <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
+    </div>
+</nav>
+
+<div class="container">
+    <header class="header">
+        <div class="glow-text">
+            <h1>🎵 RHYTHM N BOOST 🎵</h1>
+            <p class="subtitle">Lineup</p>
+        </div>
+    </header>
+
+    <div class="participant-panel">
+        <div class="input-section">
+            <p class="welcome-text">Welcome, <strong>{{ request.user.username }}</strong>!</p>
+
+            <div id="not-in-queue-section" {% if user_in_queue %}style="display:none"{% endif %}>
+                <button class="btn btn-primary btn-large" onclick="raiseHand()">
+                    <span class="btn-icon">🖐️</span> RAISE YOUR HAND
+                </button>
+            </div>
+
+            <div id="in-queue-section" class="in-queue-status" {% if not user_in_queue %}style="display:none"{% endif %}>
+                <p class="status-text">✅ You're in the lineup!</p>
+                <button class="btn btn-danger" onclick="leaveQueue()">
+                    <span class="btn-icon">🚪</span> LEAVE QUEUE
+                </button>
+            </div>
+
+            <div id="message" class="message"></div>
+        </div>
+
+        <div class="queue-section">
+            <h2 class="queue-title">✨ Current Lineup ✨</h2>
+            <div class="queue-container">
+                <ol id="queueList" class="queue-list">
+                    {% for participant in queue %}
+                        <li class="queue-item {% if participant.screen_name == request.user.username %}my-turn{% endif %}" data-name="{{ participant.screen_name }}">
+                            <span class="queue-number">{{ forloop.counter }}</span>
+                            <span class="queue-name">{{ participant.screen_name }}{% if participant.screen_name == request.user.username %} <span class="you-badge">you</span>{% endif %}</span>
+                            <span class="queue-icon">🎤</span>
+                        </li>
+                    {% empty %}
+                        <div class="empty-state">
+                            <p class="empty-icon">🎉</p>
+                            <p class="empty-text">Be the first to raise your hand!</p>
+                        </div>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <p class="info-text">💡 Raise your hand to join the queue and wait for your turn to perform!</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const myUsername = "{{ request.user.username }}";
+    let isInQueue = {{ user_in_queue|yesno:"true,false" }};
+
+    async function raiseHand() {
+        try {
+            const response = await fetch('/api/raise-hand/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showMessage('✨ Added to lineup! Good luck! ✨', 'success');
+                setQueueState(true);
+                updateQueue(data.queue);
+            } else {
+                showMessage(data.message, 'error');
+            }
+        } catch (error) {
+            showMessage('Connection error! 😞', 'error');
+        }
+    }
+
+    async function leaveQueue() {
+        if (!confirm('Leave the queue?')) return;
+        try {
+            const response = await fetch('/api/leave/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showMessage('You left the queue.', 'success');
+                setQueueState(false);
+                updateQueue(data.queue);
+            } else {
+                showMessage(data.message, 'error');
+            }
+        } catch (error) {
+            showMessage('Connection error! 😞', 'error');
+        }
+    }
+
+    function setQueueState(inQueue) {
+        isInQueue = inQueue;
+        document.getElementById('not-in-queue-section').style.display = inQueue ? 'none' : 'block';
+        document.getElementById('in-queue-section').style.display = inQueue ? 'block' : 'none';
+    }
+
+    function showMessage(text, type) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.textContent = text;
+        messageDiv.className = 'message ' + type;
+        setTimeout(() => {
+            messageDiv.textContent = '';
+            messageDiv.className = 'message';
+        }, 4000);
+    }
+
+    function updateQueue(queue) {
+        const queueList = document.getElementById('queueList');
+
+        if (queue.length === 0) {
+            queueList.innerHTML = `
+                <div class="empty-state">
+                    <p class="empty-icon">🎉</p>
+                    <p class="empty-text">Be the first to raise your hand!</p>
+                </div>
+            `;
+        } else {
+            queueList.innerHTML = queue.map((name, index) => `
+                <li class="queue-item ${name === myUsername ? 'my-turn' : ''}" data-name="${name}">
+                    <span class="queue-number">${index + 1}</span>
+                    <span class="queue-name">${name}${name === myUsername ? ' <span class="you-badge">you</span>' : ''}</span>
+                    <span class="queue-icon">🎤</span>
+                </li>
+            `).join('');
+        }
+
+        // Keep queue state in sync with polling
+        const newInQueue = queue.includes(myUsername);
+        if (newInQueue !== isInQueue) {
+            setQueueState(newInQueue);
+        }
+    }
+
+    // Refresh queue every 2 seconds
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/queue/');
+            const data = await response.json();
+            updateQueue(data.queue);
+        } catch (error) {
+            console.error('Error fetching queue:', error);
+        }
+    }, 2000);
+</script>
+{% endblock %}
