@@ -667,11 +667,41 @@ def get_registration_entries(request, reg_id):
 
     return JsonResponse({
         'title': reg.title,
+        'created_by_id': reg.created_by_id,
         'entries': [
             {
+                'id': e.id,
                 'username': e.user.username,
                 'registered_at': e.registered_at.strftime('%b %d, %Y %H:%M'),
             }
             for e in entries
         ],
     })
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_registrant(request, reg_id):
+    """Delete a registrant entry (Admin: any; Host: own registration only)"""
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+
+    data = json.loads(request.body)
+    entry_id = data.get('entry_id')
+
+    try:
+        reg = EventRegistration.objects.get(id=reg_id)
+    except EventRegistration.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Registration not found.'}, status=404)
+
+    if not request.user.is_superuser and reg.created_by != request.user:
+        return JsonResponse({'success': False, 'message': 'You can only manage registrants in your own registrations.'}, status=403)
+
+    try:
+        entry = EventRegistrationEntry.objects.get(id=entry_id, registration=reg)
+        username = entry.user.username
+        entry.delete()
+        return JsonResponse({'success': True, 'username': username})
+    except EventRegistrationEntry.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Registrant not found.'}, status=404)

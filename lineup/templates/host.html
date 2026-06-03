@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}🎵 Rhythm N Boost - Host Control Panel{% endblock %}
 
 {% block content %}
 <nav class="top-nav">
     <div class="nav-brand">
-        <span class="nav-logo">🎵</span>
+        <img src="{% static 'images/rng_logo.png' %}" class="nav-logo" alt="RNB Logo">
         <span class="nav-title">RNB Host</span>
     </div>
     <div class="nav-actions">

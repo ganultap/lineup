@@ -32,6 +32,10 @@ REM Run migrations
 echo 🗄️  Running database migrations...
 python manage.py migrate
 
+REM Collect static files
+echo 🎨 Collecting static files...
+python manage.py collectstatic --noinput
+
 REM Create superuser
 echo.
 set /p create_super="👤 Create superuser account? (y/n): "

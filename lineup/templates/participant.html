@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}🎵 Rhythm N Boost - Join the Lineup{% endblock %}
 
 {% block content %}
 <nav class="top-nav">
     <div class="nav-brand">
-        <span class="nav-logo">🎵</span>
+        <img src="{% static 'images/rng_logo.png' %}" class="nav-logo" alt="RNB Logo">
         <span class="nav-title">RNB Lineup</span>
     </div>
     <div class="nav-actions">

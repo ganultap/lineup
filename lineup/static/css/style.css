@@ -610,7 +610,17 @@ body {
 }
 
 .nav-logo {
-    font-size: 1.4rem;
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+}
+
+.auth-logo {
+    height: 90px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 12px;
 }
 
 .nav-title {
@@ -1736,6 +1746,28 @@ body {
     font-size: 0.78rem;
     color: rgba(255, 255, 255, 0.35);
     white-space: nowrap;
+}
+
+.btn-registrant-delete {
+    background: transparent;
+    border: 1px solid rgba(255, 0, 110, 0.4);
+    color: rgba(255, 0, 110, 0.7);
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: var(--transition);
+}
+
+.btn-registrant-delete:hover {
+    background: rgba(255, 0, 110, 0.15);
+    border-color: #FF006E;
+    color: #FF006E;
 }
 
 .registrants-empty {

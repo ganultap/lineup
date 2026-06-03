@@ -31,6 +31,10 @@ pip install -r requirements.txt
 echo "🗄️  Running database migrations..."
 python manage.py migrate
 
+# Collect static files
+echo "🎨 Collecting static files..."
+python manage.py collectstatic --noinput
+
 # Create superuser
 echo ""
 echo "👤 Create a superuser account for the admin panel (optional)"

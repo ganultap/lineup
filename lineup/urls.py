@@ -32,4 +32,5 @@ urlpatterns = [
     path('api/registrations/register/', views.register_for_event, name='register_for_event'),
     path('api/registrations/unregister/', views.unregister_from_event, name='unregister_from_event'),
     path('api/registrations/<int:reg_id>/entries/', views.get_registration_entries, name='get_registration_entries'),
+    path('api/registrations/<int:reg_id>/entries/delete/', views.delete_registrant, name='delete_registrant'),
 ]

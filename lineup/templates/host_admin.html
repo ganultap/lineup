@@ -6,7 +6,7 @@
 {% block content %}
 <nav class="top-nav">
     <div class="nav-brand">
-        <span class="nav-logo">🎵</span>
+        <img src="{% static 'images/rng_logo.png' %}" class="nav-logo" alt="RNB Logo">
         <span class="nav-title">RNB {% if request.user.is_superuser %}Admin{% else %}Host{% endif %}</span>
     </div>
     <div class="nav-actions">
@@ -898,7 +898,11 @@ setInterval(loadRegMgmt, 5000);
 
 // ===== REGISTRANTS MODAL =====
 
+let currentRegistrantsRegId = null;
+let currentRegistrantsCanDelete = false;
+
 async function openRegistrantsModal(regId, title) {
+    currentRegistrantsRegId = regId;
     document.getElementById('registrantsModalTitle').textContent = title;
     document.getElementById('registrantsModalBody').innerHTML = '<p class="registrants-loading">Loading…</p>';
     document.getElementById('registrantsModal').style.display = 'flex';
@@ -906,6 +910,7 @@ async function openRegistrantsModal(regId, title) {
     try {
         const res = await fetch(`/api/registrations/${regId}/entries/`);
         const data = await res.json();
+        currentRegistrantsCanDelete = IS_SUPERUSER || data.created_by_id === CURRENT_USER_ID;
         renderRegistrantsList(data.entries);
     } catch (e) {
         document.getElementById('registrantsModalBody').innerHTML =
@@ -927,13 +932,50 @@ function renderRegistrantsList(entries) {
         <p class="registrants-count">${entries.length} participant${entries.length !== 1 ? 's' : ''}</p>
         <ul class="registrants-list-items">
             ${entries.map((e, i) => `
-                <li class="registrant-item">
+                <li class="registrant-item" id="registrant-entry-${e.id}">
                     <span class="registrant-number">${i + 1}</span>
                     <span class="registrant-name">${esc(e.username)}</span>
                     <span class="registrant-time">${esc(e.registered_at)}</span>
+                    ${currentRegistrantsCanDelete ? `<button class="btn-registrant-delete" onclick="deleteRegistrant(${e.id}, '${esc(e.username).replace(/'/g, "\\'")}')">✕</button>` : ''}
                 </li>
             `).join('')}
         </ul>`;
+}
+
+async function deleteRegistrant(entryId, username) {
+    if (!confirm(`Remove "${username}" from this registration?`)) return;
+    try {
+        const res = await fetch(`/api/registrations/${currentRegistrantsRegId}/entries/delete/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({entry_id: entryId}),
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`${username} removed`);
+            document.getElementById(`registrant-entry-${entryId}`)?.remove();
+            const remaining = document.querySelectorAll('#registrantsModalBody .registrant-item');
+            const countEl = document.querySelector('#registrantsModalBody .registrants-count');
+            if (remaining.length === 0) {
+                document.getElementById('registrantsModalBody').innerHTML = `
+                    <div class="registrants-empty">
+                        <p class="empty-icon">👥</p>
+                        <p class="empty-text">No one has registered yet.</p>
+                    </div>`;
+            } else if (countEl) {
+                countEl.textContent = `${remaining.length} participant${remaining.length !== 1 ? 's' : ''}`;
+                remaining.forEach((el, i) => {
+                    const numEl = el.querySelector('.registrant-number');
+                    if (numEl) numEl.textContent = i + 1;
+                });
+            }
+            await loadRegMgmt();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error!', 'error');
+    }
 }
 
 function closeRegistrantsModal() {
