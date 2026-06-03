@@ -1823,3 +1823,105 @@ body {
         font-size: 0.9rem;
     }
 }
+
+/* ===== HOLD FEATURE ===== */
+
+.btn-hold {
+    background: linear-gradient(135deg, #FF9500, #FF6B00);
+    color: white;
+    box-shadow: 0 8px 20px rgba(255, 149, 0, 0.3);
+}
+
+.btn-hold:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(255, 149, 0, 0.5);
+}
+
+.btn-hold-active {
+    background: linear-gradient(135deg, #06FFA5, #00E699);
+    color: #0a0a0a;
+    box-shadow: 0 8px 20px rgba(6, 255, 165, 0.3);
+}
+
+.btn-hold-active:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(6, 255, 165, 0.5);
+}
+
+.in-queue-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.in-queue-actions .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.hold-badge {
+    background: rgba(255, 149, 0, 0.15);
+    border: 1px solid rgba(255, 149, 0, 0.4);
+    color: #FF9500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 6px;
+}
+
+.queue-item.on-hold {
+    opacity: 0.7;
+    border-left-color: #FF9500;
+    background: rgba(255, 149, 0, 0.08);
+}
+
+.queue-item.my-turn.on-hold {
+    border-left-color: #FF9500;
+    background: linear-gradient(135deg, rgba(255, 149, 0, 0.15), rgba(58, 134, 255, 0.1));
+}
+
+.queue-card-hold {
+    opacity: 0.75;
+    border-left: 3px solid #FF9500 !important;
+    background: rgba(255, 149, 0, 0.06) !important;
+}
+
+.btn-hold-inline {
+    background: rgba(255, 149, 0, 0.15);
+    border: 1px solid rgba(255, 149, 0, 0.5);
+    color: #FF9500;
+    padding: 6px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-hold-inline:hover {
+    background: rgba(255, 149, 0, 0.3);
+    transform: scale(1.05);
+}
+
+.btn-hold-inline.active {
+    background: rgba(6, 255, 165, 0.15);
+    border-color: rgba(6, 255, 165, 0.5);
+    color: #06FFA5;
+}
+
+.btn-hold-inline.active:hover {
+    background: rgba(6, 255, 165, 0.25);
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}

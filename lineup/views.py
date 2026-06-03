@@ -290,24 +290,84 @@ def leave_queue(request):
 @require_http_methods(["POST"])
 @csrf_exempt
 def next_participant(request):
-    """Move to next participant"""
+    """Move to next participant (skips on-hold participants)"""
     if not request.user.is_authenticated or not request.user.is_staff:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
     try:
         session = Session.objects.first() or Session.objects.create(name="Main Room")
-        next_participant = Participant.objects.filter(session=session, is_completed=False).first()
-        
-        if not next_participant:
+        next_p = Participant.objects.filter(session=session, is_completed=False, is_on_hold=False).first()
+
+        if not next_p:
+            all_active = Participant.objects.filter(session=session, is_completed=False).exists()
+            if all_active:
+                return JsonResponse({'success': False, 'message': 'All remaining participants are on hold'})
             return JsonResponse({'success': False, 'message': 'Queue is empty'})
-        
-        current_name = next_participant.screen_name
-        next_participant.is_completed = True
-        next_participant.save()
-        
+
+        current_name = next_p.screen_name
+        next_p.is_completed = True
+        next_p.save()
+
         queue = list(Participant.objects.filter(session=session, is_completed=False).values_list('screen_name', flat=True))
-        
+
         return JsonResponse({'success': True, 'message': f'NEXT UP: {current_name}', 'current': current_name, 'queue': queue})
-    
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def admin_toggle_hold(request):
+    """Toggle on-hold status for any participant (staff only)"""
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        screen_name = data.get('screen_name', '').strip()
+        if not screen_name:
+            return JsonResponse({'success': False, 'message': 'screen_name is required'})
+
+        session = Session.objects.first() or Session.objects.create(name="Main Room")
+        participant = Participant.objects.get(session=session, screen_name=screen_name, is_completed=False)
+        participant.is_on_hold = not participant.is_on_hold
+        participant.save()
+
+        return JsonResponse({'success': True, 'is_on_hold': participant.is_on_hold, 'screen_name': screen_name})
+
+    except Participant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Participant not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def toggle_hold(request):
+    """Toggle the on-hold status of the logged-in user"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Please log in first'}, status=401)
+
+    try:
+        screen_name = request.user.username
+        session = Session.objects.first() or Session.objects.create(name="Main Room")
+        participant = Participant.objects.get(session=session, screen_name=screen_name, is_completed=False)
+        participant.is_on_hold = not participant.is_on_hold
+        participant.save()
+
+        queue = list(
+            Participant.objects.filter(session=session, is_completed=False)
+            .order_by('position')
+            .values('screen_name', 'is_on_hold')
+        )
+        return JsonResponse({
+            'success': True,
+            'is_on_hold': participant.is_on_hold,
+            'queue': [{'name': p['screen_name'], 'on_hold': p['is_on_hold']} for p in queue],
+        })
+
+    except Participant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'You are not in the queue'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
@@ -332,9 +392,14 @@ def clear_queue(request):
 def get_queue(request):
     """Get current queue"""
     session = Session.objects.first() or Session.objects.create(name="Main Room")
-    queue = list(Participant.objects.filter(session=session, is_completed=False).values_list('screen_name', flat=True))
-
-    return JsonResponse({'queue': queue})
+    participants = list(
+        Participant.objects.filter(session=session, is_completed=False)
+        .order_by('position')
+        .values('screen_name', 'is_on_hold')
+    )
+    queue = [p['screen_name'] for p in participants]
+    on_hold = [p['screen_name'] for p in participants if p['is_on_hold']]
+    return JsonResponse({'queue': queue, 'on_hold': on_hold})
 
 
 @require_http_methods(["GET"])
@@ -344,7 +409,7 @@ def full_state(request):
     queue = list(
         Participant.objects.filter(session=session, is_completed=False)
         .order_by('position')
-        .values('screen_name', 'position', 'added_at')
+        .values('screen_name', 'position', 'added_at', 'is_on_hold')
     )
     completed = list(
         Participant.objects.filter(session=session, is_completed=True)
@@ -353,7 +418,8 @@ def full_state(request):
     )
     return JsonResponse({
         'queue': [{'name': p['screen_name'], 'position': p['position'],
-                   'added_at': p['added_at'].strftime('%H:%M:%S')} for p in queue],
+                   'added_at': p['added_at'].strftime('%H:%M:%S'),
+                   'on_hold': p['is_on_hold']} for p in queue],
         'completed': [p['screen_name'] for p in completed],
         'queue_count': len(queue),
         'completed_count': len(completed),

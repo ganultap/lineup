@@ -21,6 +21,7 @@ class Participant(models.Model):
     position = models.IntegerField()
     added_at = models.DateTimeField(auto_now_add=True)
     is_completed = models.BooleanField(default=False)
+    is_on_hold = models.BooleanField(default=False)
     
     class Meta:
         ordering = ['position']

@@ -34,7 +34,7 @@
             </div>
 
             <div id="in-queue-section" class="in-queue-status" {% if not user_in_queue %}style="display:none"{% endif %}>
-                <p class="status-text">✅ You're in the lineup!</p>
+                <p class="status-text" id="queueStatusText">{% if user_in_queue and user_in_queue.is_on_hold %}⏸️ You're on hold — your spot is saved!{% else %}✅ You're in the lineup!{% endif %}</p>
                 <button class="btn btn-danger" onclick="leaveQueue()">
                     <span class="btn-icon">🚪</span> LEAVE QUEUE
                 </button>
@@ -48,10 +48,20 @@
             <div class="queue-container">
                 <ol id="queueList" class="queue-list">
                     {% for participant in queue %}
-                        <li class="queue-item {% if participant.screen_name == request.user.username %}my-turn{% endif %}" data-name="{{ participant.screen_name }}">
+                        <li class="queue-item {% if participant.screen_name == request.user.username %}my-turn{% endif %}{% if participant.is_on_hold %} on-hold{% endif %}" data-name="{{ participant.screen_name }}">
                             <span class="queue-number">{{ forloop.counter }}</span>
-                            <span class="queue-name">{{ participant.screen_name }}{% if participant.screen_name == request.user.username %} <span class="you-badge">you</span>{% endif %}</span>
-                            <span class="queue-icon">🎤</span>
+                            <span class="queue-name">
+                                {{ participant.screen_name }}
+                                {% if participant.screen_name == request.user.username %}<span class="you-badge">you</span>{% endif %}
+                                {% if participant.is_on_hold %}<span class="hold-badge">on hold</span>{% endif %}
+                            </span>
+                            {% if participant.screen_name == request.user.username %}
+                                <button class="btn-hold-inline {% if participant.is_on_hold %}active{% endif %}" onclick="toggleHold()">
+                                    {% if participant.is_on_hold %}▶️ Resume{% else %}⏸️ Hold{% endif %}
+                                </button>
+                            {% else %}
+                                <span class="queue-icon">{% if participant.is_on_hold %}⏸️{% else %}🎤{% endif %}</span>
+                            {% endif %}
                         </li>
                     {% empty %}
                         <div class="empty-state">
@@ -82,6 +92,7 @@
 <script>
     const myUsername = "{{ request.user.username }}";
     let isInQueue = {{ user_in_queue|yesno:"true,false" }};
+    let isOnHold = {{ user_in_queue.is_on_hold|yesno:"true,false" }};
 
     async function raiseHand() {
         try {
@@ -95,8 +106,9 @@
 
             if (data.success) {
                 showMessage('✨ Added to lineup! Good luck! ✨', 'success');
+                isOnHold = false;
                 setQueueState(true);
-                updateQueue(data.queue);
+                updateQueue(data.queue, data.on_hold || []);
             } else {
                 showMessage(data.message, 'error');
             }
@@ -118,13 +130,47 @@
 
             if (data.success) {
                 showMessage('You left the queue.', 'success');
+                isOnHold = false;
                 setQueueState(false);
-                updateQueue(data.queue);
+                updateQueue(data.queue, data.on_hold || []);
             } else {
                 showMessage(data.message, 'error');
             }
         } catch (error) {
             showMessage('Connection error! 😞', 'error');
+        }
+    }
+
+    async function toggleHold() {
+        try {
+            const response = await fetch('/api/hold/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                isOnHold = data.is_on_hold;
+                setHoldState(isOnHold);
+                const onHoldNames = data.queue.filter(p => p.on_hold).map(p => p.name);
+                updateQueue(data.queue.map(p => p.name), onHoldNames);
+                showMessage(isOnHold ? '⏸️ You are on hold — your spot is saved!' : '▶️ You are back in the active lineup!', 'success');
+            } else {
+                showMessage(data.message, 'error');
+            }
+        } catch (error) {
+            showMessage('Connection error! 😞', 'error');
+        }
+    }
+
+    function setHoldState(onHold) {
+        const statusText = document.getElementById('queueStatusText');
+        if (statusText) {
+            statusText.textContent = onHold
+                ? '⏸️ You\'re on hold — your spot is saved!'
+                : '✅ You\'re in the lineup!';
         }
     }
 
@@ -144,8 +190,9 @@
         }, 4000);
     }
 
-    function updateQueue(queue) {
+    function updateQueue(queue, onHold = []) {
         const queueList = document.getElementById('queueList');
+        const onHoldSet = new Set(onHold);
 
         if (queue.length === 0) {
             queueList.innerHTML = `
@@ -155,19 +202,35 @@
                 </div>
             `;
         } else {
-            queueList.innerHTML = queue.map((name, index) => `
-                <li class="queue-item ${name === myUsername ? 'my-turn' : ''}" data-name="${name}">
+            queueList.innerHTML = queue.map((name, index) => {
+                const held = onHoldSet.has(name);
+                const isMe = name === myUsername;
+                const action = isMe
+                    ? `<button class="btn-hold-inline${held ? ' active' : ''}" onclick="toggleHold()">${held ? '▶️ Resume' : '⏸️ Hold'}</button>`
+                    : `<span class="queue-icon">${held ? '⏸️' : '🎤'}</span>`;
+                return `
+                <li class="queue-item ${isMe ? 'my-turn' : ''} ${held ? 'on-hold' : ''}" data-name="${name}">
                     <span class="queue-number">${index + 1}</span>
-                    <span class="queue-name">${name}${name === myUsername ? ' <span class="you-badge">you</span>' : ''}</span>
-                    <span class="queue-icon">🎤</span>
-                </li>
-            `).join('');
+                    <span class="queue-name">
+                        ${name}
+                        ${isMe ? '<span class="you-badge">you</span>' : ''}
+                        ${held ? '<span class="hold-badge">on hold</span>' : ''}
+                    </span>
+                    ${action}
+                </li>`;
+            }).join('');
         }
 
-        // Keep queue state in sync with polling
+        // Keep queue + hold state in sync with polling
         const newInQueue = queue.includes(myUsername);
         if (newInQueue !== isInQueue) {
+            isOnHold = false;
             setQueueState(newInQueue);
+        }
+        const newOnHold = onHoldSet.has(myUsername);
+        if (newOnHold !== isOnHold) {
+            isOnHold = newOnHold;
+            setHoldState(isOnHold);
         }
     }
 
@@ -176,7 +239,7 @@
         try {
             const response = await fetch('/api/queue/');
             const data = await response.json();
-            updateQueue(data.queue);
+            updateQueue(data.queue, data.on_hold || []);
         } catch (error) {
             console.error('Error fetching queue:', error);
         }

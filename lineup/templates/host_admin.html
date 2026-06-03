@@ -49,13 +49,18 @@
             <div class="queue-container">
                 <div id="activeQueue" class="active-queue">
                     {% for participant in queue %}
-                        <div class="queue-card" data-name="{{ participant.screen_name }}">
+                        <div class="queue-card{% if participant.is_on_hold %} queue-card-hold{% endif %}" data-name="{{ participant.screen_name }}">
                             <div class="card-position">{{ forloop.counter }}</div>
                             <div class="card-content">
-                                <p class="card-name">{{ participant.screen_name }}</p>
+                                <p class="card-name">{{ participant.screen_name }}{% if participant.is_on_hold %} <span class="hold-badge">on hold</span>{% endif %}</p>
                                 <p class="card-time">Added: {{ participant.added_at|date:"H:i:s" }}</p>
                             </div>
-                            <button class="btn-remove" onclick="removeParticipant('{{ participant.screen_name }}')">✕</button>
+                            <div class="card-actions">
+                                <button class="btn-hold-inline{% if participant.is_on_hold %} active{% endif %}" onclick="adminToggleHold('{{ participant.screen_name }}')">
+                                    {% if participant.is_on_hold %}▶️ Resume{% else %}⏸️ Hold{% endif %}
+                                </button>
+                                <button class="btn-remove" onclick="removeParticipant('{{ participant.screen_name }}')">✕</button>
+                            </div>
                         </div>
                     {% empty %}
                         <div class="empty-state">
@@ -405,6 +410,26 @@ async function removeParticipant(screenName) {
     }
 }
 
+async function adminToggleHold(screenName) {
+    try {
+        const res = await fetch('/api/hold-participant/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({screen_name: screenName})
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(data.is_on_hold ? `⏸️ ${screenName} put on hold` : `▶️ ${screenName} resumed`);
+            await refreshState();
+            if (IS_ADMIN) await refreshAdminState();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error! 😞', 'error');
+    }
+}
+
 // ===== STATE REFRESH (host section) =====
 
 async function refreshState() {
@@ -429,13 +454,16 @@ function renderActiveQueue(queue) {
         return;
     }
     el.innerHTML = queue.map((p, i) => `
-        <div class="queue-card" data-name="${esc(p.name)}">
+        <div class="queue-card${p.on_hold ? ' queue-card-hold' : ''}" data-name="${esc(p.name)}">
             <div class="card-position">${i + 1}</div>
             <div class="card-content">
-                <p class="card-name">${esc(p.name)}</p>
+                <p class="card-name">${esc(p.name)}${p.on_hold ? ' <span class="hold-badge">on hold</span>' : ''}</p>
                 <p class="card-time">Added: ${esc(p.added_at)}</p>
             </div>
-            <button class="btn-remove" onclick="removeParticipant('${esc(p.name)}')">✕</button>
+            <div class="card-actions">
+                <button class="btn-hold-inline${p.on_hold ? ' active' : ''}" onclick="adminToggleHold('${esc(p.name)}')">${p.on_hold ? '▶️ Resume' : '⏸️ Hold'}</button>
+                <button class="btn-remove" onclick="removeParticipant('${esc(p.name)}')">✕</button>
+            </div>
         </div>
     `).join('');
 }
