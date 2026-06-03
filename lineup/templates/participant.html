@@ -9,7 +9,7 @@
         <span class="nav-title">RNB Lineup</span>
     </div>
     <div class="nav-actions">
-        <a href="{% url 'lineup:host' %}" class="nav-link">{% if request.user.is_staff %}Admin Panel{% else %}Host Panel{% endif %}</a>
+        {% if request.user.is_staff %}<a href="{% url 'lineup:host' %}" class="nav-link">Admin Panel</a>{% endif %}
         <span class="nav-user">{{ request.user.username }}</span>
         <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
     </div>

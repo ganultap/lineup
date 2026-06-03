@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}🎵 Rhythm N Boost - {% if request.user.is_staff %}Admin{% else %}Host{% endif %} Panel{% endblock %}
+{% block title %}🎵 Rhythm N Boost - {% if request.user.is_superuser %}Admin{% else %}Host{% endif %} Panel{% endblock %}
 
 {% block content %}
 <nav class="top-nav">
     <div class="nav-brand">
         <span class="nav-logo">🎵</span>
-        <span class="nav-title">RNB {% if request.user.is_staff %}Admin{% else %}Host{% endif %}</span>
+        <span class="nav-title">RNB {% if request.user.is_superuser %}Admin{% else %}Host{% endif %}</span>
     </div>
     <div class="nav-actions">
         <a href="{% url 'lineup:index' %}" class="nav-link">Participant View</a>
@@ -21,7 +21,7 @@
     <!-- HEADER -->
     <header class="host-header">
         <div class="glow-text">
-            <h1>🎵 {% if request.user.is_staff %}ADMIN{% else %}HOST{% endif %} CONTROL PANEL 🎵</h1>
+            <h1>🎵 {% if request.user.is_superuser %}ADMIN{% else %}HOST{% endif %} CONTROL PANEL 🎵</h1>
             <p class="subtitle">Rhythm N Boost Auto Lineup</p>
         </div>
     </header>
@@ -96,7 +96,7 @@
         </div>
     </div>
 
-    {% if request.user.is_staff %}
+    {% if request.user.is_superuser %}
     <!-- ADMIN MANAGEMENT SECTION -->
     <div class="admin-divider">
         <span class="admin-divider-text">⚙️ ADMIN MANAGEMENT</span>
@@ -228,15 +228,17 @@
                             </td>
                             <td class="time-cell">{{ user.date_joined|date:"M d, Y" }}</td>
                             <td>
-                                <span id="role-badge-{{ user.id }}" class="role-badge {% if user.is_staff %}role-admin{% else %}role-host{% endif %}">
-                                    {% if user.is_staff %}Admin{% else %}Host{% endif %}
+                                <span id="role-badge-{{ user.id }}" class="role-badge {% if user.is_superuser %}role-admin{% elif user.is_staff %}role-host{% else %}role-user{% endif %}">
+                                    {% if user.is_superuser %}Admin{% elif user.is_staff %}Host{% else %}User{% endif %}
                                 </span>
                             </td>
                             <td class="actions-cell">
                                 {% if user != request.user %}
-                                    <button id="toggle-btn-{{ user.id }}" class="btn-sm btn-outline" onclick="toggleStaff({{ user.id }})">
-                                        {% if user.is_staff %}Remove Admin{% else %}Make Admin{% endif %}
-                                    </button>
+                                    <select id="role-select-{{ user.id }}" class="role-select" onchange="setRole({{ user.id }}, this.value)">
+                                        <option value="admin" {% if user.is_superuser %}selected{% endif %}>Admin</option>
+                                        <option value="host" {% if user.is_staff and not user.is_superuser %}selected{% endif %}>Host</option>
+                                        <option value="user" {% if not user.is_staff %}selected{% endif %}>User</option>
+                                    </select>
                                     <button class="btn-sm btn-danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')">Delete</button>
                                 {% else %}
                                     <span class="muted-text">—</span>
@@ -257,7 +259,7 @@
 </div>
 
 <script>
-const IS_STAFF = {% if request.user.is_staff %}true{% else %}false{% endif %};
+const IS_ADMIN = {% if request.user.is_superuser %}true{% else %}false{% endif %};
 
 // ===== HTML ESCAPING =====
 function esc(str) {
@@ -282,7 +284,7 @@ async function nextParticipant() {
             setTimeout(() => { nameEl.style.animation = 'pulse 0.5s ease-in-out'; }, 10);
             showNotification(`🎤 ${data.current} is up next!`);
             await refreshState();
-            if (IS_STAFF) await refreshAdminState();
+            if (IS_ADMIN) await refreshAdminState();
         } else {
             showNotification(data.message, 'error');
         }
@@ -303,7 +305,7 @@ async function clearAll() {
             document.getElementById('performerName').textContent = '—';
             showNotification('✨ Queue cleared!');
             await refreshState();
-            if (IS_STAFF) await refreshAdminState();
+            if (IS_ADMIN) await refreshAdminState();
         } else {
             showNotification(data.message, 'error');
         }
@@ -324,7 +326,7 @@ async function removeParticipant(screenName) {
         if (data.success) {
             showNotification(`Removed ${screenName}`);
             await refreshState();
-            if (IS_STAFF) await refreshAdminState();
+            if (IS_ADMIN) await refreshAdminState();
         } else {
             showNotification(data.message, 'error');
         }
@@ -387,7 +389,7 @@ setInterval(refreshState, 2000);
 
 // ===== ADMIN STATE REFRESH =====
 
-{% if request.user.is_staff %}
+{% if request.user.is_superuser %}
 
 async function refreshAdminState() {
     try {
@@ -560,27 +562,22 @@ async function deleteSession(sessionId, name) {
     }
 }
 
-async function toggleStaff(userId) {
+async function setRole(userId, role) {
     const res = await fetch('/admin-panel/toggle-staff/', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({user_id: userId})
+        body: JSON.stringify({user_id: userId, role: role})
     });
     const data = await res.json();
     if (data.success) {
         const badge = document.getElementById('role-badge-' + userId);
-        const btn = document.getElementById('toggle-btn-' + userId);
-        if (data.is_staff) {
-            badge.textContent = 'Admin';
-            badge.className = 'role-badge role-admin';
-            btn.textContent = 'Remove Admin';
-        } else {
-            badge.textContent = 'Host';
-            badge.className = 'role-badge role-host';
-            btn.textContent = 'Make Admin';
-        }
+        const labels = {admin: ['Admin', 'role-admin'], host: ['Host', 'role-host'], user: ['User', 'role-user']};
+        badge.textContent = labels[data.role][0];
+        badge.className = 'role-badge ' + labels[data.role][1];
         showNotification('Role updated');
     } else {
+        const select = document.getElementById('role-select-' + userId);
+        if (select) select.value = select.dataset.prev || select.value;
         showNotification(data.message, 'error');
     }
 }

@@ -90,6 +90,9 @@ def logout_view(request):
 @login_required
 def host(request):
     """Host/Admin control panel - merged single page"""
+    if not request.user.is_staff:
+        return redirect('lineup:index')
+
     sessions_qs = Session.objects.all()
     if not sessions_qs.exists():
         session = Session.objects.create(name="Main Room")
@@ -105,7 +108,7 @@ def host(request):
         'completed': completed,
     }
 
-    if request.user.is_staff:
+    if request.user.is_superuser:
         sessions_list = Session.objects.annotate(
             total_count=Count('participants'),
             active_count=Count('participants', filter=Q(participants__is_completed=False))
@@ -132,7 +135,7 @@ def admin_panel(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_create_session(request):
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
 
     data = json.loads(request.body)
@@ -148,7 +151,7 @@ def admin_create_session(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_delete_session(request):
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
 
     data = json.loads(request.body)
@@ -165,18 +168,29 @@ def admin_delete_session(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_toggle_staff(request):
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
 
     data = json.loads(request.body)
     user_id = data.get('user_id')
+    role = data.get('role')  # 'admin', 'host', or 'user'
+    if role not in ('admin', 'host', 'user'):
+        return JsonResponse({'success': False, 'message': 'Invalid role.'})
     try:
         user = User.objects.get(id=user_id)
         if user == request.user:
-            return JsonResponse({'success': False, 'message': 'Cannot modify your own admin status.'})
-        user.is_staff = not user.is_staff
+            return JsonResponse({'success': False, 'message': 'Cannot modify your own role.'})
+        if role == 'admin':
+            user.is_staff = True
+            user.is_superuser = True
+        elif role == 'host':
+            user.is_staff = True
+            user.is_superuser = False
+        else:
+            user.is_staff = False
+            user.is_superuser = False
         user.save()
-        return JsonResponse({'success': True, 'is_staff': user.is_staff})
+        return JsonResponse({'success': True, 'role': role})
     except User.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'User not found.'})
 
@@ -185,7 +199,7 @@ def admin_toggle_staff(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_delete_user(request):
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
 
     data = json.loads(request.body)
@@ -204,7 +218,7 @@ def admin_delete_user(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_clear_completed(request):
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
 
     data = json.loads(request.body)
@@ -277,8 +291,8 @@ def leave_queue(request):
 @csrf_exempt
 def next_participant(request):
     """Move to next participant"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
     try:
         session = Session.objects.first() or Session.objects.create(name="Main Room")
         next_participant = Participant.objects.filter(session=session, is_completed=False).first()
@@ -302,8 +316,8 @@ def next_participant(request):
 @csrf_exempt
 def clear_queue(request):
     """Clear entire queue"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
     try:
         session = Session.objects.first() or Session.objects.create(name="Main Room")
         Participant.objects.filter(session=session, is_completed=False).delete()
@@ -378,8 +392,8 @@ def admin_state(request):
 @csrf_exempt
 def remove_participant(request):
     """Remove a participant from queue"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
     try:
         data = json.loads(request.body)
         screen_name = data.get('screen_name', '').strip()

@@ -980,6 +980,35 @@ body {
     color: #3A86FF;
 }
 
+.role-user {
+    background: rgba(6, 255, 165, 0.12);
+    border: 1px solid rgba(6, 255, 165, 0.35);
+    color: #06FFA5;
+}
+
+.role-select {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.role-select:focus {
+    outline: none;
+    border-color: #8338EC;
+}
+
+.role-select option {
+    background: #1a1a2e;
+    color: #f0f0f0;
+}
+
 .you-badge {
     background: rgba(6, 255, 165, 0.15);
     border: 1px solid rgba(6, 255, 165, 0.3);
