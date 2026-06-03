@@ -10,8 +10,8 @@
         <span class="nav-title">RNB Lineup</span>
     </div>
     <div class="nav-actions">
-        {% if request.user.is_staff %}<a href="{% url 'lineup:host' %}" class="nav-link">Admin Panel</a>{% endif %}
-        <span class="nav-user">{{ request.user.username }}</span>
+        {% if request.user.is_staff %}<a href="{% url 'lineup:host' %}" class="nav-link">👨‍💼 Admin</a>{% endif %}
+        <span class="nav-user">👤 {{ request.user.username }}</span>
         <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
     </div>
 </nav>
@@ -20,71 +20,165 @@
     <header class="header">
         <div class="glow-text">
             <h1>🎵 RHYTHM N BOOST 🎵</h1>
-            <p class="subtitle">Lineup</p>
+            <p class="subtitle">Your Performance Awaits</p>
         </div>
     </header>
 
-    <div class="participant-panel">
-        <div class="input-section">
-            <p class="welcome-text">Welcome, <strong>{{ request.user.username }}</strong>!</p>
+    <div class="main-grid">
+        <!-- Left Column: Action & Queue -->
+        <div class="left-column">
+            <!-- Action Card -->
+            <div class="participant-panel action-card">
+                <div class="card-header">
+                    <h3 class="card-title">Ready to Perform?</h3>
+                </div>
+                <div class="input-section">
+                    <p class="welcome-text">Hey <strong>{{ request.user.username }}</strong>! 👋</p>
 
-            <div id="not-in-queue-section" {% if user_in_queue %}style="display:none"{% endif %}>
-                <button class="btn btn-primary btn-large" onclick="raiseHand()">
-                    <span class="btn-icon">🖐️</span> RAISE YOUR HAND
-                </button>
-            </div>
+                    <div id="not-in-queue-section" class="action-state" {% if user_in_queue %}style="display:none"{% endif %}>
+                        <p class="action-hint">Join the lineup and show us what you got!</p>
+                        <button class="btn btn-primary btn-large btn-raise-hand" onclick="raiseHand()">
+                            <span class="btn-icon">🖐️</span> RAISE YOUR HAND
+                        </button>
+                    </div>
 
-            <div id="in-queue-section" class="in-queue-status" {% if not user_in_queue %}style="display:none"{% endif %}>
-                <p class="status-text" id="queueStatusText">{% if user_in_queue and user_in_queue.is_on_hold %}⏸️ You're on hold — your spot is saved!{% else %}✅ You're in the lineup!{% endif %}</p>
-                <button class="btn btn-danger" onclick="leaveQueue()">
-                    <span class="btn-icon">🚪</span> LEAVE QUEUE
-                </button>
-            </div>
-
-            <div id="message" class="message"></div>
-        </div>
-
-        <div class="queue-section">
-            <h2 class="queue-title">✨ Current Lineup ✨</h2>
-            <div class="queue-container">
-                <ol id="queueList" class="queue-list">
-                    {% for participant in queue %}
-                        <li class="queue-item {% if participant.screen_name == request.user.username %}my-turn{% endif %}{% if participant.is_on_hold %} on-hold{% endif %}" data-name="{{ participant.screen_name }}">
-                            <span class="queue-number">{{ forloop.counter }}</span>
-                            <span class="queue-name">
-                                {{ participant.screen_name }}
-                                {% if participant.screen_name == request.user.username %}<span class="you-badge">you</span>{% endif %}
-                                {% if participant.is_on_hold %}<span class="hold-badge">on hold</span>{% endif %}
-                            </span>
-                            {% if participant.screen_name == request.user.username %}
-                                <button class="btn-hold-inline {% if participant.is_on_hold %}active{% endif %}" onclick="toggleHold()">
-                                    {% if participant.is_on_hold %}▶️ Resume{% else %}⏸️ Hold{% endif %}
-                                </button>
-                            {% else %}
-                                <span class="queue-icon">{% if participant.is_on_hold %}⏸️{% else %}🎤{% endif %}</span>
-                            {% endif %}
-                        </li>
-                    {% empty %}
-                        <div class="empty-state">
-                            <p class="empty-icon">🎉</p>
-                            <p class="empty-text">Be the first to raise your hand!</p>
+                    <div id="in-queue-section" class="action-state in-queue-status" {% if not user_in_queue %}style="display:none"{% endif %}>
+                        <div class="status-badge">
+                            <span class="status-icon" id="statusIcon">✅</span>
+                            <p class="status-text" id="queueStatusText">{% if user_in_queue and user_in_queue.is_on_hold %}You're on hold — spot saved!{% else %}You're in the lineup!{% endif %}</p>
                         </div>
-                    {% endfor %}
-                </ol>
+                        <button class="btn btn-danger" onclick="leaveQueue()">
+                            <span class="btn-icon">🚪</span> LEAVE QUEUE
+                        </button>
+                    </div>
+
+                    <div id="message" class="message"></div>
+                </div>
+            </div>
+
+            <!-- Queue Section -->
+            <div class="participant-panel queue-panel">
+                <div class="card-header">
+                    <h3 class="card-title">✨ Current Lineup</h3>
+                    <span class="queue-count-badge" id="queueCount">{{ queue.count }}</span>
+                </div>
+                <div class="queue-container">
+                    <ol id="queueList" class="queue-list">
+                        {% for participant in queue %}
+                            <li class="queue-item {% if participant.screen_name == request.user.username %}my-turn{% endif %}{% if participant.is_on_hold %} on-hold{% endif %}" data-name="{{ participant.screen_name }}">
+                                <span class="queue-position">
+                                    <span class="queue-number">{{ forloop.counter }}</span>
+                                </span>
+                                <span class="queue-info">
+                                    <span class="queue-name">{{ participant.screen_name }}</span>
+                                    <div class="queue-badges">
+                                        {% if participant.screen_name == request.user.username %}<span class="badge badge-you">🎯 You</span>{% endif %}
+                                        {% if participant.is_on_hold %}<span class="badge badge-hold">⏸️ On Hold</span>{% endif %}
+                                    </div>
+                                </span>
+                                {% if participant.screen_name == request.user.username %}
+                                    <button class="btn-hold-inline {% if participant.is_on_hold %}active{% endif %}" onclick="toggleHold()">
+                                        {% if participant.is_on_hold %}▶️ Resume{% else %}⏸️ Hold{% endif %}
+                                    </button>
+                                {% else %}
+                                    <span class="queue-status-icon">{% if participant.is_on_hold %}⏸️{% else %}🎤{% endif %}</span>
+                                {% endif %}
+                            </li>
+                        {% empty %}
+                            <div class="empty-state">
+                                <p class="empty-icon">🎉</p>
+                                <p class="empty-text">Be the first to raise your hand!</p>
+                            </div>
+                        {% endfor %}
+                    </ol>
+                </div>
+                <div class="info-section">
+                    <p class="info-text">💡 Raise your hand to join the queue and wait for your turn!</p>
+                </div>
             </div>
         </div>
 
-        <div class="info-section">
-            <p class="info-text">💡 Raise your hand to join the queue and wait for your turn to perform!</p>
+        <!-- Right Column: Stats & Info -->
+        <div class="right-column">
+            <div class="participant-panel stats-card">
+                <div class="card-header">
+                    <h3 class="card-title">Your Status</h3>
+                </div>
+                <div class="stats-content">
+                    <div class="stat-item">
+                        <span class="stat-icon">📍</span>
+                        <div class="stat-info">
+                            <p class="stat-label">Position</p>
+                            <p class="stat-value" id="userPosition">
+                                {% if user_in_queue %}
+                                    {% for i in queue %}
+                                        {% if i.screen_name == request.user.username %}{{ forloop.counter }}{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">👥</span>
+                        <div class="stat-info">
+                            <p class="stat-label">Total In Queue</p>
+                            <p class="stat-value" id="totalInQueue">{{ queue.count }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">🎤</span>
+                        <div class="stat-info">
+                            <p class="stat-label">Status</p>
+                            <p class="stat-value status-value" id="statusValue">
+                                {% if user_in_queue %}
+                                    {% if user_in_queue.is_on_hold %}
+                                        🔴 On Hold
+                                    {% else %}
+                                        🟢 Active
+                                    {% endif %}
+                                {% else %}
+                                    🔵 Waiting
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="participant-panel tips-card">
+                <div class="card-header">
+                    <h3 class="card-title">Quick Tips</h3>
+                </div>
+                <div class="tips-content">
+                    <div class="tip-item">
+                        <span class="tip-number">1</span>
+                        <p>Raise your hand to join the queue</p>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-number">2</span>
+                        <p>Use Hold to pause your spot</p>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-number">3</span>
+                        <p>Be ready when it's your turn!</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Registrations Section -->
     <div class="registrations-wrapper">
-        <h2 class="registrations-heading">📋 Registrations</h2>
+        <div class="registrations-header">
+            <h2 class="registrations-heading">📋 Available Events</h2>
+            <p class="registrations-subtitle">Sign up for upcoming events and performances</p>
+        </div>
         <div id="registrationCards" class="registrations-grid">
             <div class="reg-empty-state">
-                <p class="empty-icon">📝</p>
-                <p class="empty-text">No registrations available yet.</p>
+                <p class="empty-icon">🎪</p>
+                <p class="empty-text">No events available yet.</p>
             </div>
         </div>
     </div>
@@ -208,19 +302,26 @@
                 const isMe = name === myUsername;
                 const action = isMe
                     ? `<button class="btn-hold-inline${held ? ' active' : ''}" onclick="toggleHold()">${held ? '▶️ Resume' : '⏸️ Hold'}</button>`
-                    : `<span class="queue-icon">${held ? '⏸️' : '🎤'}</span>`;
+                    : `<span class="queue-status-icon">${held ? '⏸️' : '🎤'}</span>`;
                 return `
                 <li class="queue-item ${isMe ? 'my-turn' : ''} ${held ? 'on-hold' : ''}" data-name="${name}">
-                    <span class="queue-number">${index + 1}</span>
-                    <span class="queue-name">
-                        ${name}
-                        ${isMe ? '<span class="you-badge">you</span>' : ''}
-                        ${held ? '<span class="hold-badge">on hold</span>' : ''}
+                    <span class="queue-position">
+                        <span class="queue-number">${index + 1}</span>
+                    </span>
+                    <span class="queue-info">
+                        <span class="queue-name">${name}</span>
+                        <div class="queue-badges">
+                            ${isMe ? '<span class="badge badge-you">🎯 You</span>' : ''}
+                            ${held ? '<span class="badge badge-hold">⏸️ On Hold</span>' : ''}
+                        </div>
                     </span>
                     ${action}
                 </li>`;
             }).join('');
         }
+
+        // Update stats on the right column
+        updateStatsDisplay(queue, onHoldSet);
 
         // Keep queue + hold state in sync with polling
         const newInQueue = queue.includes(myUsername);
@@ -232,6 +333,41 @@
         if (newOnHold !== isOnHold) {
             isOnHold = newOnHold;
             setHoldState(isOnHold);
+        }
+    }
+
+    function updateStatsDisplay(queue, onHoldSet) {
+        // Update total in queue
+        const totalInQueueEl = document.getElementById('totalInQueue');
+        if (totalInQueueEl) {
+            totalInQueueEl.textContent = queue.length;
+        }
+
+        // Update queue count badge
+        const queueCountBadge = document.querySelector('.queue-count-badge');
+        if (queueCountBadge) {
+            queueCountBadge.textContent = queue.length;
+        }
+
+        // Update user position
+        const userPosition = queue.indexOf(myUsername) + 1;
+        const userPositionEl = document.getElementById('userPosition');
+        if (userPositionEl) {
+            userPositionEl.textContent = userPosition > 0 ? userPosition : '—';
+        }
+
+        // Update status value
+        const statusValueEl = document.getElementById('statusValue');
+        if (statusValueEl) {
+            if (userPosition > 0) {
+                if (onHoldSet.has(myUsername)) {
+                    statusValueEl.textContent = '🔴 On Hold';
+                } else {
+                    statusValueEl.textContent = '🟢 Active';
+                }
+            } else {
+                statusValueEl.textContent = '🔵 Waiting';
+            }
         }
     }
 
