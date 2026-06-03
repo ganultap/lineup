@@ -1,345 +1,1191 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}🎵 Rhythm N Boost - {% if request.user.is_superuser %}Admin{% else %}Host{% endif %} Panel{% endblock %}
+{% block title %}🎵 RNB — {% if request.user.is_superuser %}Admin{% else %}Host{% endif %} Panel{% endblock %}
 
 {% block content %}
-<nav class="top-nav">
-    <div class="nav-brand">
-        <img src="{% static 'images/rng_logo.png' %}" class="nav-logo" alt="RNB Logo">
-        <span class="nav-title">RNB {% if request.user.is_superuser %}Admin{% else %}Host{% endif %}</span>
-    </div>
-    <div class="nav-actions">
-        <a href="{% url 'lineup:index' %}" class="nav-link">Participant View</a>
-        <span class="nav-user">{{ request.user.username }}</span>
-        <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
-    </div>
-</nav>
+<style>
+/* ===== HOST-ADMIN COMPACT REDESIGN ===== */
 
-<div class="host-admin-wrapper">
+.ha-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 0;
+}
 
-    <!-- HEADER -->
-    <header class="host-header">
-        <div class="glow-text">
-            <h2>🎵 {% if request.user.is_superuser %}ADMIN{% else %}HOST{% endif %} CONTROL PANEL 🎵</h2>
-            <p class="subtitle">Rhythm N Boost Auto Lineup</p>
+/* ── Command Bar ── */
+.ha-bar {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    background: rgba(8, 4, 20, 0.92);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    backdrop-filter: blur(20px);
+    flex-wrap: wrap;
+}
+
+.ha-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.ha-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+.ha-brand-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #FF006E, #8338EC);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+}
+
+.ha-bar-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255,255,255,0.1);
+    flex-shrink: 0;
+}
+
+.ha-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.ha-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.ha-btn-next {
+    background: linear-gradient(135deg, #06FFA5, #00cc84);
+    color: #0a0a0a;
+    box-shadow: 0 4px 14px rgba(6,255,165,0.3);
+}
+.ha-btn-next:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(6,255,165,0.5);
+}
+.ha-btn-clear {
+    background: rgba(255,0,110,0.12);
+    border: 1px solid rgba(255,0,110,0.35);
+    color: #FF006E;
+}
+.ha-btn-clear:hover {
+    background: rgba(255,0,110,0.22);
+}
+
+/* ── Now Performing chip ── */
+.ha-now {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(255,0,110,0.1);
+    border: 1px solid rgba(255,0,110,0.25);
+    border-radius: 20px;
+    flex-shrink: 0;
+}
+.ha-now-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+}
+.ha-now-name {
+    font-size: 0.9rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FF006E, #8338EC);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Stat chips ── */
+.ha-stats {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.ha-stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    white-space: nowrap;
+}
+.ha-stat-chip .chip-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ha-stat-chip .chip-val {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: #fff;
+}
+.ha-stat-chip.chip-queue .chip-val { color: #3A86FF; }
+.ha-stat-chip.chip-done .chip-val  { color: #06FFA5; }
+
+/* ── Nav links ── */
+.ha-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.ha-nav-link {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    text-decoration: none;
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+.ha-nav-link:hover { color: #fff; }
+.ha-nav-user {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #8338EC;
+    white-space: nowrap;
+}
+.ha-nav-logout {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.ha-nav-logout:hover {
+    border-color: rgba(255,0,110,0.5);
+    color: #FF006E;
+}
+
+/* ── Body ── */
+.ha-body {
+    padding: 18px 20px;
+    max-width: 1300px;
+    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+}
+
+/* ── Section title strip ── */
+.ha-section-strip {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.ha-section-strip::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+}
+.ha-section-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.35);
+    white-space: nowrap;
+}
+
+/* ── Queue layout ── */
+.ha-queues {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.ha-panel {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.ha-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.015);
+}
+.ha-panel-head h3 {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.55);
+    margin: 0;
+}
+.ha-panel-count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.5);
+}
+
+.ha-queue-list {
+    padding: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ── Queue card ── */
+.ha-qcard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: rgba(131,56,236,0.08);
+    border: 1px solid rgba(131,56,236,0.15);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+.ha-qcard:hover {
+    background: rgba(131,56,236,0.14);
+    border-color: rgba(131,56,236,0.3);
+    transform: translateX(3px);
+}
+.ha-qcard.ha-qcard-hold {
+    background: rgba(255,149,0,0.06);
+    border-color: rgba(255,149,0,0.2);
+    opacity: 0.8;
+}
+
+.ha-qcard-pos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #FF006E, #8338EC);
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 900;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.ha-qcard-body {
+    flex: 1;
+    min-width: 0;
+}
+.ha-qcard-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ha-qcard-time {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.35);
+    margin-top: 1px;
+}
+
+.ha-qcard-acts {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.ha-btn-hold {
+    padding: 4px 10px;
+    background: rgba(255,149,0,0.12);
+    border: 1px solid rgba(255,149,0,0.4);
+    color: #FF9500;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.ha-btn-hold:hover { background: rgba(255,149,0,0.22); }
+.ha-btn-hold.active {
+    background: rgba(6,255,165,0.12);
+    border-color: rgba(6,255,165,0.4);
+    color: #06FFA5;
+}
+
+.ha-btn-x {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,0,110,0.1);
+    border: 1px solid rgba(255,0,110,0.3);
+    color: #FF006E;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ha-btn-x:hover { background: rgba(255,0,110,0.22); }
+
+.ha-hold-badge {
+    background: rgba(255,149,0,0.15);
+    border: 1px solid rgba(255,149,0,0.35);
+    color: #FF9500;
+    padding: 1px 6px;
+    border-radius: 20px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 5px;
+}
+
+/* ── Completed list ── */
+.ha-completed-list {
+    padding: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.ha-comp-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(6,255,165,0.06);
+    border: 1px solid rgba(6,255,165,0.1);
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+.ha-comp-name {
+    color: rgba(255,255,255,0.75);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ha-comp-check { color: #06FFA5; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+
+/* ── Empty state ── */
+.ha-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 16px;
+    gap: 6px;
+}
+.ha-empty-icon { font-size: 2rem; }
+.ha-empty-text { font-size: 0.82rem; color: rgba(255,255,255,0.4); text-align: center; }
+
+/* ── Registration section ── */
+.ha-reg-section {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+.ha-reg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+.ha-reg-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #FF006E, #3A86FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.ha-btn-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #FF006E, #8338EC);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 3px 10px rgba(255,0,110,0.25);
+    white-space: nowrap;
+}
+.ha-btn-add:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(255,0,110,0.4); }
+
+.ha-reg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+}
+.ha-reg-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 24px 16px;
+}
+
+/* ── Admin section ── */
+.ha-admin-section {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 32px;
+}
+
+.ha-tab-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding: 0 16px;
+}
+.ha-tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(255,255,255,0.4);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 10px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+}
+.ha-tab-btn:hover { color: rgba(255,255,255,0.7); }
+.ha-tab-btn.active { color: #FF006E; border-bottom-color: #FF006E; }
+
+.ha-tab-content { display: none; padding: 18px 16px 22px; }
+.ha-tab-content.active { display: block; }
+
+.ha-admin-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+}
+.ha-admin-card {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.ha-admin-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ha-admin-card-head h4 {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255,255,255,0.45);
+    margin: 0;
+}
+
+.ha-table-wrap { max-height: 360px; overflow-y: auto; }
+.ha-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+.ha-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: rgba(255,255,255,0.3);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-weight: 700;
+}
+.ha-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+    color: rgba(255,255,255,0.8);
+}
+.ha-table tr:last-child td { border-bottom: none; }
+.ha-table tr:hover td { background: rgba(255,255,255,0.025); }
+
+.ha-pos-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(135deg, #FF006E, #8338EC);
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+}
+.ha-session-tag {
+    background: rgba(131,56,236,0.15);
+    border: 1px solid rgba(131,56,236,0.35);
+    color: #8338EC;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ha-time-cell { color: rgba(255,255,255,0.35); font-size: 0.75rem; }
+.ha-name-cell { font-weight: 600; }
+
+.ha-btn-tbl-del {
+    background: rgba(255,0,110,0.1);
+    border: 1px solid rgba(255,0,110,0.3);
+    color: #FF006E;
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ha-btn-tbl-del:hover { background: rgba(255,0,110,0.2); }
+
+/* Sessions */
+.ha-sessions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+}
+.ha-session-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: all 0.2s;
+}
+.ha-session-card:hover {
+    border-color: rgba(131,56,236,0.25);
+    background: rgba(131,56,236,0.04);
+}
+.ha-session-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+.ha-session-name { font-size: 0.9rem; font-weight: 700; color: rgba(255,255,255,0.9); }
+.ha-session-date { font-size: 0.72rem; color: rgba(255,255,255,0.3); white-space: nowrap; }
+.ha-session-stats { display: flex; gap: 6px; margin-bottom: 12px; }
+.ha-spill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.5);
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+.ha-spill-active {
+    background: rgba(6,255,165,0.08);
+    border-color: rgba(6,255,165,0.25);
+    color: #06FFA5;
+}
+.ha-session-actions { display: flex; gap: 6px; }
+
+/* Users */
+.ha-actions-cell { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ha-role-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ha-role-admin { background: rgba(255,0,110,0.12); border: 1px solid rgba(255,0,110,0.35); color: #FF006E; }
+.ha-role-host  { background: rgba(58,134,255,0.12); border: 1px solid rgba(58,134,255,0.35); color: #3A86FF; }
+.ha-role-user  { background: rgba(6,255,165,0.1);  border: 1px solid rgba(6,255,165,0.3);  color: #06FFA5; }
+.ha-you-badge {
+    background: rgba(6,255,165,0.1);
+    border: 1px solid rgba(6,255,165,0.25);
+    color: #06FFA5;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 5px;
+}
+.ha-role-select {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.75);
+    padding: 4px 8px;
+    border-radius: 7px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ha-role-select:focus { outline: none; border-color: #8338EC; }
+.ha-role-select option { background: #1a1a2e; }
+.ha-muted { color: rgba(255,255,255,0.2); font-size: 0.8rem; }
+
+/* Section header row (sessions + create) */
+.ha-sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+.ha-sec-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #FF006E, #3A86FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.ha-inline-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.ha-inline-input {
+    flex: 1;
+    min-width: 160px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 9px;
+    background: rgba(255,255,255,0.05);
+    color: #f0f0f0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+.ha-inline-input:focus { outline: none; border-color: #FF006E; }
+.ha-inline-input::placeholder { color: rgba(255,255,255,0.35); }
+
+/* Reg mgmt card */
+.ha-regcard {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s;
+}
+.ha-regcard:hover {
+    border-color: rgba(131,56,236,0.25);
+    background: rgba(131,56,236,0.04);
+}
+.ha-regcard-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+}
+.ha-regcard-desc {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.4;
+}
+.ha-regcard-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ha-regcard-acts { display: flex; gap: 6px; }
+.ha-creator-tag { font-size: 0.72rem; color: rgba(255,255,255,0.3); }
+
+.ha-count-pill {
+    background: rgba(58,134,255,0.12);
+    border: 1px solid rgba(58,134,255,0.25);
+    color: #3A86FF;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.2s;
+}
+.ha-count-pill:hover { background: rgba(58,134,255,0.22); }
+
+/* ── Shared small btns ── */
+.ha-btn-sm {
+    padding: 5px 12px;
+    border-radius: 7px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+.ha-btn-sm.danger {
+    background: rgba(255,0,110,0.12);
+    border: 1px solid rgba(255,0,110,0.35);
+    color: #FF006E;
+}
+.ha-btn-sm.danger:hover { background: rgba(255,0,110,0.22); }
+.ha-btn-sm.outline {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.65);
+}
+.ha-btn-sm.outline:hover { background: rgba(255,255,255,0.09); color: #fff; }
+.ha-btn-sm.success-sm {
+    background: linear-gradient(135deg, #06FFA5, #00cc84);
+    color: #0a0a0a;
+    border: none;
+}
+
+/* ── Notification ── */
+.ha-notif {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    z-index: 9999;
+    animation: ha-slideIn 0.25s ease-out;
+    max-width: 320px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.ha-notif.success { background: linear-gradient(135deg, #06FFA5, #00cc84); color: #081217; }
+.ha-notif.error   { background: linear-gradient(135deg, #FF006E, #cc0054); color: #fff; }
+@keyframes ha-slideIn {
+    from { opacity: 0; transform: translateX(60px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .ha-queues { grid-template-columns: 1fr; }
+    .ha-admin-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+    .ha-bar { padding: 8px 12px; gap: 8px; }
+    .ha-brand-label { display: none; }
+    .ha-now-name { max-width: 110px; }
+    .ha-stats { display: none; }
+    .ha-body { padding: 12px; }
+}
+</style>
+
+<div class="ha-page">
+
+    <!-- ── COMMAND BAR ── -->
+    <div class="ha-bar">
+        <div class="ha-brand">
+            <img src="{% static 'images/rng_logo.png' %}" class="ha-logo" alt="RNB">
+            <span class="ha-brand-label">{% if request.user.is_superuser %}Admin{% else %}Host{% endif %}</span>
         </div>
-    </header>
 
-    <!-- HOST CONTROLS BAR -->
-    <div class="host-controls">
-        <div class="control-buttons">
-            <button class="btn btn-success btn-large" onclick="nextParticipant()">
-                <span class="btn-icon">⏭️</span> NEXT PERFORMER
-            </button>
-            <button class="btn btn-danger btn-large" onclick="clearAll()">
-                <span class="btn-icon">🗑️</span> CLEAR QUEUE
-            </button>
+        <div class="ha-bar-divider"></div>
+
+        <div class="ha-actions">
+            <button class="ha-btn ha-btn-next" onclick="nextParticipant()">⏭ Next</button>
+            <button class="ha-btn ha-btn-clear" onclick="clearAll()">🗑 Clear</button>
         </div>
-        <div class="current-performer">
-            <p class="performer-label">Now Performing:</p>
-            <p class="performer-name" id="performerName">—</p>
+
+        <div class="ha-bar-divider"></div>
+
+        <div class="ha-now">
+            <span class="ha-now-label">Now:</span>
+            <span class="ha-now-name" id="performerName">—</span>
+        </div>
+
+        <div class="ha-stats">
+            <div class="ha-stat-chip chip-queue">
+                <span class="chip-label">Queue</span>
+                <span class="chip-val" id="queueCount">{{ queue.count }}</span>
+            </div>
+            <div class="ha-stat-chip chip-done">
+                <span class="chip-label">Done</span>
+                <span class="chip-val" id="completedCount">{{ completed.count }}</span>
+            </div>
+        </div>
+
+        <div class="ha-nav">
+            <a href="{% url 'lineup:index' %}" class="ha-nav-link">Participant View</a>
+            <span class="ha-nav-user">{{ request.user.username }}</span>
+            <a href="{% url 'lineup:logout' %}" class="ha-nav-logout">Logout</a>
         </div>
     </div>
 
-    <!-- ACTIVE QUEUE + COMPLETED -->
-    <div class="host-content">
-        <div class="queue-panel">
-            <h2 class="panel-title">🎤 Active Queue (<span id="queueCount">{{ queue.count }}</span>)</h2>
-            <div class="queue-container">
-                <div id="activeQueue" class="active-queue">
+    <!-- ── BODY ── -->
+    <div class="ha-body">
+
+        <!-- Queue + Completed -->
+        <div class="ha-section-strip">
+            <span class="ha-section-title">🎤 Live Queue</span>
+        </div>
+
+        <div class="ha-queues">
+            <!-- Active Queue -->
+            <div class="ha-panel">
+                <div class="ha-panel-head">
+                    <h3>Active Queue</h3>
+                    <span class="ha-panel-count" id="activeQueueCount">{{ queue.count }}</span>
+                </div>
+                <div id="activeQueue" class="ha-queue-list">
                     {% for participant in queue %}
-                        <div class="queue-card{% if participant.is_on_hold %} queue-card-hold{% endif %}" data-name="{{ participant.screen_name }}">
-                            <div class="card-position">{{ forloop.counter }}</div>
-                            <div class="card-content">
-                                <p class="card-name">{{ participant.screen_name }}{% if participant.is_on_hold %} <span class="hold-badge">on hold</span>{% endif %}</p>
-                                <p class="card-time">Added: {{ participant.added_at|date:"H:i:s" }}</p>
+                        <div class="ha-qcard{% if participant.is_on_hold %} ha-qcard-hold{% endif %}" data-name="{{ participant.screen_name }}">
+                            <div class="ha-qcard-pos">{{ forloop.counter }}</div>
+                            <div class="ha-qcard-body">
+                                <div class="ha-qcard-name">
+                                    {{ participant.screen_name }}
+                                    {% if participant.is_on_hold %}<span class="ha-hold-badge">hold</span>{% endif %}
+                                </div>
+                                <div class="ha-qcard-time">{{ participant.added_at|date:"H:i:s" }}</div>
                             </div>
-                            <div class="card-actions">
-                                <button class="btn-hold-inline{% if participant.is_on_hold %} active{% endif %}" onclick="adminToggleHold('{{ participant.screen_name }}')">
-                                    {% if participant.is_on_hold %}▶️ Resume{% else %}⏸️ Hold{% endif %}
+                            <div class="ha-qcard-acts">
+                                <button class="ha-btn-hold{% if participant.is_on_hold %} active{% endif %}" onclick="adminToggleHold('{{ participant.screen_name }}')">
+                                    {% if participant.is_on_hold %}▶ Resume{% else %}⏸ Hold{% endif %}
                                 </button>
-                                <button class="btn-remove" onclick="removeParticipant('{{ participant.screen_name }}')">✕</button>
+                                <button class="ha-btn-x" onclick="removeParticipant('{{ participant.screen_name }}')">✕</button>
                             </div>
                         </div>
                     {% empty %}
-                        <div class="empty-state">
-                            <p class="empty-icon">🎉</p>
-                            <p class="empty-text">Queue is empty - Ready for action!</p>
+                        <div class="ha-empty">
+                            <div class="ha-empty-icon">🎉</div>
+                            <div class="ha-empty-text">Queue is empty — ready for action!</div>
                         </div>
                     {% endfor %}
                 </div>
             </div>
-        </div>
 
-        <div class="completed-panel">
-            <h2 class="panel-title">✅ Completed (<span id="completedCount">{{ completed.count }}</span>)</h2>
-            <div class="queue-container completed-container">
-                <div id="completedList" class="completed-list">
+            <!-- Completed -->
+            <div class="ha-panel">
+                <div class="ha-panel-head">
+                    <h3>Completed</h3>
+                    <span class="ha-panel-count" id="completedPanelCount">{{ completed.count }}</span>
+                </div>
+                <div id="completedList" class="ha-completed-list">
                     {% for participant in completed %}
-                        <div class="completed-card">
-                            <span class="completed-name">{{ participant.screen_name }}</span>
-                            <span class="completed-check">✓</span>
+                        <div class="ha-comp-item">
+                            <span class="ha-comp-name">{{ participant.screen_name }}</span>
+                            <span class="ha-comp-check">✓</span>
                         </div>
                     {% empty %}
-                        <p class="no-completed-text">No one completed yet</p>
+                        <div class="ha-empty">
+                            <div class="ha-empty-icon">✅</div>
+                            <div class="ha-empty-text">No one completed yet</div>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- STATS -->
-    <div class="stats-section">
-        <div class="stat-box">
-            <p class="stat-label">Total in Queue</p>
-            <p class="stat-value" id="statQueueCount">{{ queue.count }}</p>
+        <!-- Registrations -->
+        <div class="ha-section-strip">
+            <span class="ha-section-title">📋 Registrations</span>
         </div>
-        <div class="stat-box">
-            <p class="stat-label">Completed</p>
-            <p class="stat-value" id="statCompletedCount">{{ completed.count }}</p>
-        </div>
-    </div>
 
-    <!-- REGISTRATIONS SECTION (Admin + Host) -->
-    <div class="reg-mgmt-divider">
-        <span class="reg-mgmt-divider-text">📋 REGISTRATIONS</span>
-    </div>
-
-    <div class="reg-mgmt-section">
-        <div class="reg-mgmt-header">
-            <h2 class="reg-mgmt-title">Registration Events</h2>
-            <button class="btn btn-primary" onclick="openRegModal()">+ Add Registration</button>
-        </div>
-        <div id="regMgmtList" class="reg-mgmt-grid">
-            <div class="reg-empty-state">
-                <p class="empty-icon">📝</p>
-                <p class="empty-text">No registrations yet. Click "Add Registration" to create one.</p>
+        <div class="ha-reg-section">
+            <div class="ha-reg-head">
+                <span class="ha-reg-title">Registration Events</span>
+                <button class="ha-btn-add" onclick="openRegModal()">+ Add</button>
             </div>
-        </div>
-    </div>
-
-    <!-- REGISTRATION MODAL -->
-    <div id="registrationModal" class="modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 class="modal-title">Add Registrations</h3>
-                <button class="modal-close-btn" onclick="closeRegModal()">✕</button>
-            </div>
-            <div id="regRowsList" class="reg-rows-list"></div>
-            <button class="btn-add-row" onclick="addRegRow()">+ Add Row</button>
-            <div class="modal-footer">
-                <button class="btn btn-success" onclick="saveRegistrations()">Save</button>
-                <button class="btn btn-outline" onclick="closeRegModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- REGISTRANTS MODAL -->
-    <div id="registrantsModal" class="modal-overlay" style="display:none;" onclick="handleRegistrantsOverlayClick(event)">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 class="modal-title" id="registrantsModalTitle">Registrants</h3>
-                <button class="modal-close-btn" onclick="closeRegistrantsModal()">✕</button>
-            </div>
-            <div id="registrantsModalBody" class="registrants-list"></div>
-        </div>
-    </div>
-
-    <!-- EDIT REGISTRATION MODAL -->
-    <div id="editRegModal" class="modal-overlay" style="display:none;" onclick="handleEditModalOverlayClick(event)">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 class="modal-title">Edit Registration</h3>
-                <button class="modal-close-btn" onclick="closeEditRegModal()">✕</button>
-            </div>
-            <div class="edit-reg-form">
-                <input type="hidden" id="editRegId">
-                <div class="edit-field">
-                    <label class="edit-label">Title <span class="required-star">*</span></label>
-                    <input type="text" id="editRegTitle" class="input-field" placeholder="Registration title">
-                </div>
-                <div class="edit-field">
-                    <label class="edit-label">Description <span class="optional-note">(optional)</span></label>
-                    <input type="text" id="editRegDescription" class="input-field" placeholder="Details or description">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-success" onclick="saveEditRegistration()">Save Changes</button>
-                <button class="btn btn-outline" onclick="closeEditRegModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    {% if request.user.is_superuser %}
-    <!-- ADMIN MANAGEMENT SECTION -->
-    <div class="admin-divider">
-        <span class="admin-divider-text">⚙️ ADMIN MANAGEMENT</span>
-    </div>
-
-    <div class="admin-section">
-        <div class="tab-nav">
-            <button class="tab-btn active" onclick="switchAdminTab('allqueues', this)">All Queues</button>
-            <button class="tab-btn" onclick="switchAdminTab('sessions', this)">Sessions</button>
-            <button class="tab-btn" onclick="switchAdminTab('users', this)">Users</button>
-        </div>
-
-        <!-- ALL QUEUES TAB -->
-        <div id="admin-tab-allqueues" class="tab-content active">
-            <div class="admin-grid">
-                <div class="admin-card">
-                    <h3 class="card-title">Active Participants (All Sessions)</h3>
-                    <div id="adminActiveTableWrapper" class="participant-table-wrapper">
-                        {% if active_participants %}
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>#</th><th>Name</th><th>Session</th><th>Joined</th><th>Action</th></tr>
-                                </thead>
-                                <tbody id="adminActiveTableBody">
-                                    {% for p in active_participants %}
-                                    <tr data-name="{{ p.screen_name }}">
-                                        <td><span class="position-badge">{{ p.position }}</span></td>
-                                        <td class="name-cell">{{ p.screen_name }}</td>
-                                        <td><span class="session-tag">{{ p.session.name }}</span></td>
-                                        <td class="time-cell">{{ p.added_at|date:"H:i" }}</td>
-                                        <td><button class="btn-table-danger" onclick="adminRemoveFromQueue('{{ p.screen_name }}')">Remove</button></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% else %}
-                            <div class="empty-state">
-                                <p class="empty-icon">🎉</p>
-                                <p class="empty-text">No active participants</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="admin-card">
-                    <div class="card-title-row">
-                        <h3 class="card-title">Completed (All Sessions)</h3>
-                        <button class="btn-sm btn-danger" onclick="clearAllCompleted()">Clear All</button>
-                    </div>
-                    <div id="adminCompletedWrapper" class="participant-table-wrapper">
-                        {% if completed_participants %}
-                            <table class="data-table">
-                                <thead>
-                                    <tr><th>Name</th><th>Session</th></tr>
-                                </thead>
-                                <tbody id="adminCompletedTableBody">
-                                    {% for p in completed_participants %}
-                                    <tr>
-                                        <td class="name-cell">{{ p.screen_name }}</td>
-                                        <td><span class="session-tag">{{ p.session.name }}</span></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        {% else %}
-                            <div class="empty-state">
-                                <p class="empty-icon">✅</p>
-                                <p class="empty-text">No completed participants</p>
-                            </div>
-                        {% endif %}
-                    </div>
+            <div id="regMgmtList" class="ha-reg-grid">
+                <div class="ha-reg-empty">
+                    <div class="ha-empty-icon">📝</div>
+                    <div class="ha-empty-text">No registrations yet. Click "+ Add" to create one.</div>
                 </div>
             </div>
         </div>
 
-        <!-- SESSIONS TAB -->
-        <div id="admin-tab-sessions" class="tab-content">
-            <div class="section-header">
-                <h2 class="section-title">Sessions</h2>
-                <button class="btn btn-primary" onclick="showCreateSession()">+ New Session</button>
-            </div>
-            <div id="createSessionForm" class="inline-form" style="display:none;">
-                <input type="text" id="newSessionName" class="input-field inline-input" placeholder="Session name (e.g. Main Room)">
-                <button class="btn btn-success" onclick="createSession()">Create</button>
-                <button class="btn btn-outline" onclick="hideCreateSession()">Cancel</button>
-            </div>
-            <div id="sessionsList" class="sessions-grid">
-                {% for session in sessions %}
-                <div class="session-card" id="session-{{ session.id }}">
-                    <div class="session-card-header">
-                        <span class="session-name">{{ session.name }}</span>
-                        <span class="session-created">{{ session.created_at|date:"M d, Y" }}</span>
-                    </div>
-                    <div class="session-stats">
-                        <span class="stat-pill">{{ session.total_count }} total</span>
-                        <span class="stat-pill active-pill">{{ session.active_count }} active</span>
-                    </div>
-                    <div class="session-actions">
-                        <button class="btn-sm btn-danger" onclick="deleteSession({{ session.id }}, '{{ session.name }}')">Delete Session</button>
-                        <button class="btn-sm btn-outline" onclick="clearCompleted({{ session.id }})">Clear Completed</button>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="empty-state">
-                    <p class="empty-icon">📋</p>
-                    <p class="empty-text">No sessions yet. Create one above.</p>
-                </div>
-                {% endfor %}
-            </div>
+        {% if request.user.is_superuser %}
+        <!-- Admin Section -->
+        <div class="ha-section-strip">
+            <span class="ha-section-title">⚙️ Admin</span>
         </div>
 
-        <!-- USERS TAB -->
-        <div id="admin-tab-users" class="tab-content">
-            <div class="section-header">
-                <h2 class="section-title">Registered Users</h2>
-                <!-- <a href="{% url 'lineup:register' %}" class="btn btn-primary">+ Add User</a> -->
+        <div class="ha-admin-section">
+            <div class="ha-tab-nav">
+                <button class="ha-tab-btn active" onclick="switchAdminTab('allqueues', this)">All Queues</button>
+                <button class="ha-tab-btn" onclick="switchAdminTab('sessions', this)">Sessions</button>
+                <button class="ha-tab-btn" onclick="switchAdminTab('users', this)">Users</button>
             </div>
-            <div class="admin-card">
-                <table class="data-table">
-                    <thead>
-                        <tr><th>Username</th><th>Joined</th><th>Role</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr id="user-row-{{ user.id }}">
-                            <td class="name-cell">
-                                {{ user.username }}
-                                {% if user == request.user %}<span class="you-badge">you</span>{% endif %}
-                            </td>
-                            <td class="time-cell">{{ user.date_joined|date:"M d, Y" }}</td>
-                            <td>
-                                <span id="role-badge-{{ user.id }}" class="role-badge {% if user.is_superuser %}role-admin{% elif user.is_staff %}role-host{% else %}role-user{% endif %}">
-                                    {% if user.is_superuser %}Admin{% elif user.is_staff %}Host{% else %}User{% endif %}
-                                </span>
-                            </td>
-                            <td class="actions-cell">
-                                {% if user != request.user %}
-                                    <select id="role-select-{{ user.id }}" class="role-select" onchange="setRole({{ user.id }}, this.value)">
-                                        <option value="admin" {% if user.is_superuser %}selected{% endif %}>Admin</option>
-                                        <option value="host" {% if user.is_staff and not user.is_superuser %}selected{% endif %}>Host</option>
-                                        <option value="user" {% if not user.is_staff %}selected{% endif %}>User</option>
-                                    </select>
-                                    <button class="btn-sm btn-danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')">Delete</button>
-                                {% else %}
-                                    <span class="muted-text">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="4" style="text-align:center;padding:20px;color:rgba(255,255,255,0.4);">No users registered.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
+            <!-- All Queues -->
+            <div id="admin-tab-allqueues" class="ha-tab-content active">
+                <div class="ha-admin-grid">
+                    <div class="ha-admin-card">
+                        <div class="ha-admin-card-head">
+                            <h4>Active — All Sessions</h4>
+                        </div>
+                        <div id="adminActiveTableWrapper" class="ha-table-wrap">
+                            {% if active_participants %}
+                                <table class="ha-table">
+                                    <thead>
+                                        <tr><th>#</th><th>Name</th><th>Session</th><th>Joined</th><th>Action</th></tr>
+                                    </thead>
+                                    <tbody id="adminActiveTableBody">
+                                        {% for p in active_participants %}
+                                        <tr data-name="{{ p.screen_name }}">
+                                            <td><span class="ha-pos-badge">{{ p.position }}</span></td>
+                                            <td class="ha-name-cell">{{ p.screen_name }}</td>
+                                            <td><span class="ha-session-tag">{{ p.session.name }}</span></td>
+                                            <td class="ha-time-cell">{{ p.added_at|date:"H:i" }}</td>
+                                            <td><button class="ha-btn-tbl-del" onclick="adminRemoveFromQueue('{{ p.screen_name }}')">Remove</button></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <div class="ha-empty"><div class="ha-empty-icon">🎉</div><div class="ha-empty-text">No active participants</div></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="ha-admin-card">
+                        <div class="ha-admin-card-head">
+                            <h4>Completed — All Sessions</h4>
+                            <button class="ha-btn-sm danger" onclick="clearAllCompleted()">Clear All</button>
+                        </div>
+                        <div id="adminCompletedWrapper" class="ha-table-wrap">
+                            {% if completed_participants %}
+                                <table class="ha-table">
+                                    <thead><tr><th>Name</th><th>Session</th></tr></thead>
+                                    <tbody id="adminCompletedTableBody">
+                                        {% for p in completed_participants %}
+                                        <tr>
+                                            <td class="ha-name-cell">{{ p.screen_name }}</td>
+                                            <td><span class="ha-session-tag">{{ p.session.name }}</span></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <div class="ha-empty"><div class="ha-empty-icon">✅</div><div class="ha-empty-text">No completed participants</div></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sessions -->
+            <div id="admin-tab-sessions" class="ha-tab-content">
+                <div class="ha-sec-head">
+                    <span class="ha-sec-title">Sessions</span>
+                    <button class="ha-btn-sm success-sm" onclick="showCreateSession()">+ New Session</button>
+                </div>
+                <div id="createSessionForm" class="ha-inline-form" style="display:none;">
+                    <input type="text" id="newSessionName" class="ha-inline-input" placeholder="Session name (e.g. Main Room)">
+                    <button class="ha-btn-sm success-sm" onclick="createSession()">Create</button>
+                    <button class="ha-btn-sm outline" onclick="hideCreateSession()">Cancel</button>
+                </div>
+                <div id="sessionsList" class="ha-sessions-grid">
+                    {% for session in sessions %}
+                    <div class="ha-session-card" id="session-{{ session.id }}">
+                        <div class="ha-session-head">
+                            <span class="ha-session-name">{{ session.name }}</span>
+                            <span class="ha-session-date">{{ session.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="ha-session-stats">
+                            <span class="ha-spill">{{ session.total_count }} total</span>
+                            <span class="ha-spill ha-spill-active">{{ session.active_count }} active</span>
+                        </div>
+                        <div class="ha-session-actions">
+                            <button class="ha-btn-sm danger" onclick="deleteSession({{ session.id }}, '{{ session.name }}')">Delete</button>
+                            <button class="ha-btn-sm outline" onclick="clearCompleted({{ session.id }})">Clear Done</button>
+                        </div>
+                    </div>
+                    {% empty %}
+                        <div class="ha-empty" style="grid-column:1/-1;"><div class="ha-empty-icon">📋</div><div class="ha-empty-text">No sessions yet.</div></div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Users -->
+            <div id="admin-tab-users" class="ha-tab-content">
+                <div class="ha-sec-head">
+                    <span class="ha-sec-title">Users</span>
+                </div>
+                <div class="ha-admin-card">
+                    <table class="ha-table">
+                        <thead>
+                            <tr><th>Username</th><th>Joined</th><th>Role</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr id="user-row-{{ user.id }}">
+                                <td class="ha-name-cell">
+                                    {{ user.username }}
+                                    {% if user == request.user %}<span class="ha-you-badge">you</span>{% endif %}
+                                </td>
+                                <td class="ha-time-cell">{{ user.date_joined|date:"M d, Y" }}</td>
+                                <td>
+                                    <span id="role-badge-{{ user.id }}" class="ha-role-badge {% if user.is_superuser %}ha-role-admin{% elif user.is_staff %}ha-role-host{% else %}ha-role-user{% endif %}">
+                                        {% if user.is_superuser %}Admin{% elif user.is_staff %}Host{% else %}User{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user != request.user %}
+                                    <div class="ha-actions-cell">
+                                        <select id="role-select-{{ user.id }}" class="ha-role-select" onchange="setRole({{ user.id }}, this.value)">
+                                            <option value="admin" {% if user.is_superuser %}selected{% endif %}>Admin</option>
+                                            <option value="host" {% if user.is_staff and not user.is_superuser %}selected{% endif %}>Host</option>
+                                            <option value="user" {% if not user.is_staff %}selected{% endif %}>User</option>
+                                        </select>
+                                        <button class="ha-btn-sm danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')">Delete</button>
+                                    </div>
+                                    {% else %}
+                                        <span class="ha-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" style="text-align:center;padding:20px;color:rgba(255,255,255,0.3);">No users registered.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+        {% endif %}
+
+    </div><!-- /.ha-body -->
+</div><!-- /.ha-page -->
+
+<!-- ── REGISTRATION MODAL ── -->
+<div id="registrationModal" class="modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Registrations</h3>
+            <button class="modal-close-btn" onclick="closeRegModal()">✕</button>
+        </div>
+        <div id="regRowsList" class="reg-rows-list"></div>
+        <button class="btn-add-row" onclick="addRegRow()">+ Add Row</button>
+        <div class="modal-footer">
+            <button class="btn btn-success" onclick="saveRegistrations()">Save</button>
+            <button class="btn btn-outline" onclick="closeRegModal()">Cancel</button>
+        </div>
     </div>
-    {% endif %}
+</div>
 
+<!-- ── REGISTRANTS MODAL ── -->
+<div id="registrantsModal" class="modal-overlay" style="display:none;" onclick="handleRegistrantsOverlayClick(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 class="modal-title" id="registrantsModalTitle">Registrants</h3>
+            <button class="modal-close-btn" onclick="closeRegistrantsModal()">✕</button>
+        </div>
+        <div id="registrantsModalBody" class="registrants-list"></div>
+    </div>
+</div>
+
+<!-- ── EDIT REG MODAL ── -->
+<div id="editRegModal" class="modal-overlay" style="display:none;" onclick="handleEditModalOverlayClick(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Registration</h3>
+            <button class="modal-close-btn" onclick="closeEditRegModal()">✕</button>
+        </div>
+        <div class="edit-reg-form">
+            <input type="hidden" id="editRegId">
+            <div class="edit-field">
+                <label class="edit-label">Title <span class="required-star">*</span></label>
+                <input type="text" id="editRegTitle" class="input-field" placeholder="Registration title">
+            </div>
+            <div class="edit-field">
+                <label class="edit-label">Description <span class="optional-note">(optional)</span></label>
+                <input type="text" id="editRegDescription" class="input-field" placeholder="Details or description">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-success" onclick="saveEditRegistration()">Save Changes</button>
+            <button class="btn btn-outline" onclick="closeEditRegModal()">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <script>
 const IS_ADMIN = {% if request.user.is_superuser %}true{% else %}false{% endif %};
+const IS_SUPERUSER = IS_ADMIN;
+const CURRENT_USER_ID = {{ request.user.id }};
 
-// ===== HTML ESCAPING =====
 function esc(str) {
     const d = document.createElement('div');
-    d.textContent = str;
+    d.textContent = str ?? '';
     return d.innerHTML;
 }
 
@@ -347,46 +1193,31 @@ function esc(str) {
 
 async function nextParticipant() {
     try {
-        const res = await fetch('/api/next/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-        });
+        const res = await fetch('/api/next/', { method: 'POST', headers: {'Content-Type': 'application/json'} });
         const data = await res.json();
         if (data.success) {
-            const nameEl = document.getElementById('performerName');
-            nameEl.textContent = data.current;
-            nameEl.style.animation = 'none';
-            setTimeout(() => { nameEl.style.animation = 'pulse 0.5s ease-in-out'; }, 10);
+            document.getElementById('performerName').textContent = data.current;
             showNotification(`🎤 ${data.current} is up next!`);
             await refreshState();
             if (IS_ADMIN) await refreshAdminState();
         } else {
             showNotification(data.message, 'error');
         }
-    } catch (e) {
-        showNotification('Connection error! 😞', 'error');
-    }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
 async function clearAll() {
     if (!confirm('🗑️ Clear the entire queue? This cannot be undone!')) return;
     try {
-        const res = await fetch('/api/clear/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-        });
+        const res = await fetch('/api/clear/', { method: 'POST', headers: {'Content-Type': 'application/json'} });
         const data = await res.json();
         if (data.success) {
             document.getElementById('performerName').textContent = '—';
             showNotification('✨ Queue cleared!');
             await refreshState();
             if (IS_ADMIN) await refreshAdminState();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error! 😞', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
 async function removeParticipant(screenName) {
@@ -402,12 +1233,8 @@ async function removeParticipant(screenName) {
             showNotification(`Removed ${screenName}`);
             await refreshState();
             if (IS_ADMIN) await refreshAdminState();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error! 😞', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
 async function adminToggleHold(screenName) {
@@ -419,18 +1246,14 @@ async function adminToggleHold(screenName) {
         });
         const data = await res.json();
         if (data.success) {
-            showNotification(data.is_on_hold ? `⏸️ ${screenName} put on hold` : `▶️ ${screenName} resumed`);
+            showNotification(data.is_on_hold ? `⏸️ ${screenName} on hold` : `▶️ ${screenName} resumed`);
             await refreshState();
             if (IS_ADMIN) await refreshAdminState();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error! 😞', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
-// ===== STATE REFRESH (host section) =====
+// ===== STATE REFRESH =====
 
 async function refreshState() {
     try {
@@ -438,31 +1261,31 @@ async function refreshState() {
         const data = await res.json();
         renderActiveQueue(data.queue);
         renderCompletedList(data.completed);
-        document.getElementById('queueCount').textContent = data.queue_count;
-        document.getElementById('completedCount').textContent = data.completed_count;
-        document.getElementById('statQueueCount').textContent = data.queue_count;
-        document.getElementById('statCompletedCount').textContent = data.completed_count;
-    } catch (e) {
-        console.error('State refresh error:', e);
-    }
+        const qc = data.queue_count;
+        const cc = data.completed_count;
+        document.getElementById('queueCount').textContent = qc;
+        document.getElementById('completedCount').textContent = cc;
+        document.getElementById('activeQueueCount').textContent = qc;
+        document.getElementById('completedPanelCount').textContent = cc;
+    } catch (e) { console.error('State refresh error:', e); }
 }
 
 function renderActiveQueue(queue) {
     const el = document.getElementById('activeQueue');
     if (queue.length === 0) {
-        el.innerHTML = `<div class="empty-state"><p class="empty-icon">🎉</p><p class="empty-text">Queue is empty - Ready for action!</p></div>`;
+        el.innerHTML = `<div class="ha-empty"><div class="ha-empty-icon">🎉</div><div class="ha-empty-text">Queue is empty — ready for action!</div></div>`;
         return;
     }
     el.innerHTML = queue.map((p, i) => `
-        <div class="queue-card${p.on_hold ? ' queue-card-hold' : ''}" data-name="${esc(p.name)}">
-            <div class="card-position">${i + 1}</div>
-            <div class="card-content">
-                <p class="card-name">${esc(p.name)}${p.on_hold ? ' <span class="hold-badge">on hold</span>' : ''}</p>
-                <p class="card-time">Added: ${esc(p.added_at)}</p>
+        <div class="ha-qcard${p.on_hold ? ' ha-qcard-hold' : ''}" data-name="${esc(p.name)}">
+            <div class="ha-qcard-pos">${i + 1}</div>
+            <div class="ha-qcard-body">
+                <div class="ha-qcard-name">${esc(p.name)}${p.on_hold ? ' <span class="ha-hold-badge">hold</span>' : ''}</div>
+                <div class="ha-qcard-time">${esc(p.added_at)}</div>
             </div>
-            <div class="card-actions">
-                <button class="btn-hold-inline${p.on_hold ? ' active' : ''}" onclick="adminToggleHold('${esc(p.name)}')">${p.on_hold ? '▶️ Resume' : '⏸️ Hold'}</button>
-                <button class="btn-remove" onclick="removeParticipant('${esc(p.name)}')">✕</button>
+            <div class="ha-qcard-acts">
+                <button class="ha-btn-hold${p.on_hold ? ' active' : ''}" onclick="adminToggleHold('${esc(p.name)}')">${p.on_hold ? '▶ Resume' : '⏸ Hold'}</button>
+                <button class="ha-btn-x" onclick="removeParticipant('${esc(p.name)}')">✕</button>
             </div>
         </div>
     `).join('');
@@ -471,21 +1294,20 @@ function renderActiveQueue(queue) {
 function renderCompletedList(completed) {
     const el = document.getElementById('completedList');
     if (completed.length === 0) {
-        el.innerHTML = `<p class="no-completed-text">No one completed yet</p>`;
+        el.innerHTML = `<div class="ha-empty"><div class="ha-empty-icon">✅</div><div class="ha-empty-text">No one completed yet</div></div>`;
         return;
     }
     el.innerHTML = completed.map(name => `
-        <div class="completed-card">
-            <span class="completed-name">${esc(name)}</span>
-            <span class="completed-check">✓</span>
+        <div class="ha-comp-item">
+            <span class="ha-comp-name">${esc(name)}</span>
+            <span class="ha-comp-check">✓</span>
         </div>
     `).join('');
 }
 
-// Auto-poll host section every 2 seconds
 setInterval(refreshState, 2000);
 
-// ===== ADMIN STATE REFRESH =====
+// ===== ADMIN STATE =====
 
 {% if request.user.is_superuser %}
 
@@ -495,110 +1317,85 @@ async function refreshAdminState() {
         const data = await res.json();
         renderAdminActiveTable(data.active);
         renderAdminCompletedTable(data.completed);
-    } catch (e) {
-        console.error('Admin state refresh error:', e);
-    }
+    } catch (e) { console.error('Admin state refresh error:', e); }
 }
 
 function renderAdminActiveTable(active) {
     const wrapper = document.getElementById('adminActiveTableWrapper');
     if (active.length === 0) {
-        wrapper.innerHTML = `<div class="empty-state"><p class="empty-icon">🎉</p><p class="empty-text">No active participants</p></div>`;
+        wrapper.innerHTML = `<div class="ha-empty"><div class="ha-empty-icon">🎉</div><div class="ha-empty-text">No active participants</div></div>`;
         return;
     }
     const rows = active.map(p => `
         <tr data-name="${esc(p.name)}">
-            <td><span class="position-badge">${esc(String(p.position))}</span></td>
-            <td class="name-cell">${esc(p.name)}</td>
-            <td><span class="session-tag">${esc(p.session)}</span></td>
-            <td class="time-cell">${esc(p.added_at)}</td>
-            <td><button class="btn-table-danger" onclick="adminRemoveFromQueue('${esc(p.name)}')">Remove</button></td>
+            <td><span class="ha-pos-badge">${esc(String(p.position))}</span></td>
+            <td class="ha-name-cell">${esc(p.name)}</td>
+            <td><span class="ha-session-tag">${esc(p.session)}</span></td>
+            <td class="ha-time-cell">${esc(p.added_at)}</td>
+            <td><button class="ha-btn-tbl-del" onclick="adminRemoveFromQueue('${esc(p.name)}')">Remove</button></td>
         </tr>
     `).join('');
-    wrapper.innerHTML = `
-        <table class="data-table">
-            <thead><tr><th>#</th><th>Name</th><th>Session</th><th>Joined</th><th>Action</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>`;
+    wrapper.innerHTML = `<table class="ha-table"><thead><tr><th>#</th><th>Name</th><th>Session</th><th>Joined</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderAdminCompletedTable(completed) {
     const wrapper = document.getElementById('adminCompletedWrapper');
     if (completed.length === 0) {
-        wrapper.innerHTML = `<div class="empty-state"><p class="empty-icon">✅</p><p class="empty-text">No completed participants</p></div>`;
+        wrapper.innerHTML = `<div class="ha-empty"><div class="ha-empty-icon">✅</div><div class="ha-empty-text">No completed participants</div></div>`;
         return;
     }
     const rows = completed.map(p => `
         <tr>
-            <td class="name-cell">${esc(p.name)}</td>
-            <td><span class="session-tag">${esc(p.session)}</span></td>
+            <td class="ha-name-cell">${esc(p.name)}</td>
+            <td><span class="ha-session-tag">${esc(p.session)}</span></td>
         </tr>
     `).join('');
-    wrapper.innerHTML = `
-        <table class="data-table">
-            <thead><tr><th>Name</th><th>Session</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>`;
+    wrapper.innerHTML = `<table class="ha-table"><thead><tr><th>Name</th><th>Session</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-// Auto-poll admin section every 3 seconds
 setInterval(refreshAdminState, 3000);
-
-// ===== ADMIN ACTIONS =====
 
 async function adminRemoveFromQueue(screenName) {
     if (!confirm(`Remove ${screenName} from queue?`)) return;
     const res = await fetch('/api/remove/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({screen_name: screenName})
     });
     const data = await res.json();
     if (data.success) {
         showNotification(`Removed ${screenName}`);
         await Promise.all([refreshState(), refreshAdminState()]);
-    } else {
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 async function clearAllCompleted() {
     if (!confirm('Clear all completed participants across all sessions?')) return;
     const res = await fetch('/admin-panel/clear-completed/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({})
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({})
     });
     const data = await res.json();
     if (data.success) {
         showNotification('Cleared all completed participants');
         await Promise.all([refreshState(), refreshAdminState()]);
-    } else {
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 async function clearCompleted(sessionId) {
     if (!confirm('Clear completed participants for this session?')) return;
     const res = await fetch('/admin-panel/clear-completed/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({session_id: sessionId})
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({session_id: sessionId})
     });
     const data = await res.json();
     if (data.success) {
         showNotification('Completed participants cleared');
         await Promise.all([refreshState(), refreshAdminState()]);
-    } else {
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 function showCreateSession() {
     document.getElementById('createSessionForm').style.display = 'flex';
     document.getElementById('newSessionName').focus();
 }
-
 function hideCreateSession() {
     document.getElementById('createSessionForm').style.display = 'none';
     document.getElementById('newSessionName').value = '';
@@ -608,167 +1405,130 @@ async function createSession() {
     const name = document.getElementById('newSessionName').value.trim();
     if (!name) { showNotification('Session name is required.', 'error'); return; }
     const res = await fetch('/admin-panel/create-session/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name})
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
     });
     const data = await res.json();
     if (data.success) {
         showNotification(`Session "${data.session.name}" created`);
         hideCreateSession();
         const grid = document.getElementById('sessionsList');
-        const emptyState = grid.querySelector('.empty-state');
-        if (emptyState) emptyState.remove();
+        const emptyState = grid.querySelector('.ha-empty');
+        if (emptyState) emptyState.closest('[style*="grid-column"]')?.remove() || emptyState.parentElement?.remove?.() || emptyState.remove();
         const card = document.createElement('div');
-        card.className = 'session-card';
+        card.className = 'ha-session-card';
         card.id = 'session-' + data.session.id;
         const safeName = esc(data.session.name);
-        const safeId = data.session.id;
         card.innerHTML = `
-            <div class="session-card-header">
-                <span class="session-name">${safeName}</span>
-                <span class="session-created">Just now</span>
+            <div class="ha-session-head">
+                <span class="ha-session-name">${safeName}</span>
+                <span class="ha-session-date">Just now</span>
             </div>
-            <div class="session-stats">
-                <span class="stat-pill">0 total</span>
-                <span class="stat-pill active-pill">0 active</span>
+            <div class="ha-session-stats">
+                <span class="ha-spill">0 total</span>
+                <span class="ha-spill ha-spill-active">0 active</span>
             </div>
-            <div class="session-actions">
-                <button class="btn-sm btn-danger" onclick="deleteSession(${safeId}, '${safeName}')">Delete Session</button>
-                <button class="btn-sm btn-outline" onclick="clearCompleted(${safeId})">Clear Completed</button>
+            <div class="ha-session-actions">
+                <button class="ha-btn-sm danger" onclick="deleteSession(${data.session.id}, '${safeName}')">Delete</button>
+                <button class="ha-btn-sm outline" onclick="clearCompleted(${data.session.id})">Clear Done</button>
             </div>`;
         grid.prepend(card);
-    } else {
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 async function deleteSession(sessionId, name) {
     if (!confirm(`Delete session "${name}" and all its participants? This cannot be undone.`)) return;
     const res = await fetch('/admin-panel/delete-session/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({session_id: sessionId})
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({session_id: sessionId})
     });
     const data = await res.json();
     if (data.success) {
         showNotification(`Session "${name}" deleted`);
         document.getElementById('session-' + sessionId)?.remove();
         await Promise.all([refreshState(), refreshAdminState()]);
-    } else {
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 async function setRole(userId, role) {
     const res = await fetch('/admin-panel/toggle-staff/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({user_id: userId, role: role})
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId, role})
     });
     const data = await res.json();
     if (data.success) {
         const badge = document.getElementById('role-badge-' + userId);
-        const labels = {admin: ['Admin', 'role-admin'], host: ['Host', 'role-host'], user: ['User', 'role-user']};
-        badge.textContent = labels[data.role][0];
-        badge.className = 'role-badge ' + labels[data.role][1];
+        const map = {admin: ['Admin', 'ha-role-admin'], host: ['Host', 'ha-role-host'], user: ['User', 'ha-role-user']};
+        badge.textContent = map[data.role][0];
+        badge.className = 'ha-role-badge ' + map[data.role][1];
         showNotification('Role updated');
-    } else {
-        const select = document.getElementById('role-select-' + userId);
-        if (select) select.value = select.dataset.prev || select.value;
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 async function deleteUser(userId, username) {
     if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
     const res = await fetch('/admin-panel/delete-user/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({user_id: userId})
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: userId})
     });
     const data = await res.json();
     if (data.success) {
         showNotification(`User "${username}" deleted`);
         document.getElementById('user-row-' + userId)?.remove();
-    } else {
-        showNotification(data.message, 'error');
-    }
+    } else { showNotification(data.message, 'error'); }
 }
 
 function switchAdminTab(tab, btn) {
     document.querySelectorAll('[id^="admin-tab-"]').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-nav .tab-btn').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.ha-tab-nav .ha-tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('admin-tab-' + tab).classList.add('active');
     btn.classList.add('active');
 }
 
 {% endif %}
 
-// ===== REGISTRATIONS MANAGEMENT =====
-
-const IS_SUPERUSER = {% if request.user.is_superuser %}true{% else %}false{% endif %};
-const CURRENT_USER_ID = {{ request.user.id }};
+// ===== REGISTRATIONS =====
 
 async function loadRegMgmt() {
     try {
         const res = await fetch('/api/registrations/');
         const data = await res.json();
         renderRegMgmtList(data.registrations);
-    } catch (e) {
-        console.error('Reg mgmt load error:', e);
-    }
+    } catch (e) { console.error('Reg mgmt load error:', e); }
 }
 
 function renderRegMgmtList(registrations) {
     const el = document.getElementById('regMgmtList');
     if (!registrations || registrations.length === 0) {
-        el.innerHTML = `
-            <div class="reg-empty-state">
-                <p class="empty-icon">📝</p>
-                <p class="empty-text">No registrations yet. Click "Add Registration" to create one.</p>
-            </div>`;
+        el.innerHTML = `<div class="ha-reg-empty"><div class="ha-empty-icon">📝</div><div class="ha-empty-text">No registrations yet. Click "+ Add" to create one.</div></div>`;
         return;
     }
     el.innerHTML = registrations.map(reg => {
         const canEdit = IS_SUPERUSER || reg.created_by_id === CURRENT_USER_ID;
         return `
-        <div class="reg-mgmt-card" id="reg-mgmt-${reg.id}">
-            <div class="reg-mgmt-card-body">
-                <h4 class="reg-mgmt-card-title">${esc(reg.title)}</h4>
-                ${reg.description ? `<p class="reg-mgmt-card-desc">${esc(reg.description)}</p>` : ''}
-                <div class="reg-mgmt-card-meta">
-                    <button class="reg-count-pill" onclick="openRegistrantsModal(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}')">👥 ${reg.count} registered</button>
-                    <span class="reg-creator-tag">by ${esc(reg.created_by)}</span>
-                </div>
+        <div class="ha-regcard" id="reg-mgmt-${reg.id}">
+            <div>
+                <div class="ha-regcard-title">${esc(reg.title)}</div>
+                ${reg.description ? `<div class="ha-regcard-desc">${esc(reg.description)}</div>` : ''}
+            </div>
+            <div class="ha-regcard-meta">
+                <button class="ha-count-pill" onclick="openRegistrantsModal(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}')">👥 ${reg.count} registered</button>
+                <span class="ha-creator-tag">by ${esc(reg.created_by)}</span>
             </div>
             ${canEdit ? `
-            <div class="reg-mgmt-card-actions">
-                <button class="btn-sm btn-outline" onclick="openEditRegModal(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}', '${esc(reg.description).replace(/'/g, "\\'")}')">Edit</button>
-                <button class="btn-sm btn-danger" onclick="deleteRegistration(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}')">Delete</button>
+            <div class="ha-regcard-acts">
+                <button class="ha-btn-sm outline" onclick="openEditRegModal(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}', '${esc(reg.description).replace(/'/g, "\\'")}')">Edit</button>
+                <button class="ha-btn-sm danger" onclick="deleteRegistration(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}')">Delete</button>
             </div>` : ''}
         </div>`;
     }).join('');
 }
 
-// Modal open/close
 function openRegModal() {
-    const rowsList = document.getElementById('regRowsList');
-    rowsList.innerHTML = '';
+    document.getElementById('regRowsList').innerHTML = '';
     addRegRow();
     document.getElementById('registrationModal').style.display = 'flex';
 }
-
-function closeRegModal() {
-    document.getElementById('registrationModal').style.display = 'none';
-}
-
-function handleModalOverlayClick(e) {
-    if (e.target === document.getElementById('registrationModal')) closeRegModal();
-}
+function closeRegModal() { document.getElementById('registrationModal').style.display = 'none'; }
+function handleModalOverlayClick(e) { if (e.target === document.getElementById('registrationModal')) closeRegModal(); }
 
 let regRowCount = 0;
-
 function addRegRow() {
     const id = ++regRowCount;
     const row = document.createElement('div');
@@ -782,117 +1542,72 @@ function addRegRow() {
         <button class="reg-row-remove" onclick="removeRegRow(${id})" title="Remove">✕</button>`;
     document.getElementById('regRowsList').appendChild(row);
 }
-
-function removeRegRow(id) {
-    const row = document.getElementById('reg-row-' + id);
-    if (row) row.remove();
-}
+function removeRegRow(id) { document.getElementById('reg-row-' + id)?.remove(); }
 
 async function saveRegistrations() {
     const rows = document.querySelectorAll('#regRowsList .reg-row');
     const items = [];
-    let valid = true;
     rows.forEach(row => {
         const title = row.querySelector('.reg-row-title').value.trim();
         const description = row.querySelector('.reg-row-desc').value.trim();
-        if (title) {
-            items.push({title, description});
-        } else {
-            row.querySelector('.reg-row-title').style.borderColor = '#FF006E';
-            valid = false;
-        }
+        if (title) { items.push({title, description}); }
+        else { row.querySelector('.reg-row-title').style.borderColor = '#FF006E'; }
     });
-
-    if (!items.length) {
-        showNotification('At least one registration with a title is required.', 'error');
-        return;
-    }
-
+    if (!items.length) { showNotification('At least one registration with a title is required.', 'error'); return; }
     try {
         const res = await fetch('/api/registrations/create/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({items}),
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({items})
         });
         const data = await res.json();
         if (data.success) {
             showNotification(`Created ${data.registrations.length} registration(s)!`);
             closeRegModal();
             await loadRegMgmt();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error!', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
-// Edit modal
 function openEditRegModal(id, title, description) {
     document.getElementById('editRegId').value = id;
     document.getElementById('editRegTitle').value = title;
     document.getElementById('editRegDescription').value = description;
     document.getElementById('editRegModal').style.display = 'flex';
 }
-
-function closeEditRegModal() {
-    document.getElementById('editRegModal').style.display = 'none';
-}
-
-function handleEditModalOverlayClick(e) {
-    if (e.target === document.getElementById('editRegModal')) closeEditRegModal();
-}
+function closeEditRegModal() { document.getElementById('editRegModal').style.display = 'none'; }
+function handleEditModalOverlayClick(e) { if (e.target === document.getElementById('editRegModal')) closeEditRegModal(); }
 
 async function saveEditRegistration() {
     const id = document.getElementById('editRegId').value;
     const title = document.getElementById('editRegTitle').value.trim();
     const description = document.getElementById('editRegDescription').value.trim();
-
-    if (!title) {
-        showNotification('Title is required.', 'error');
-        return;
-    }
-
+    if (!title) { showNotification('Title is required.', 'error'); return; }
     try {
         const res = await fetch('/api/registrations/edit/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({id, title, description}),
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, title, description})
         });
         const data = await res.json();
         if (data.success) {
             showNotification('Registration updated!');
             closeEditRegModal();
             await loadRegMgmt();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error!', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
 async function deleteRegistration(id, title) {
     if (!confirm(`Delete registration "${title}"? This cannot be undone.`)) return;
     try {
         const res = await fetch('/api/registrations/delete/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({id}),
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})
         });
         const data = await res.json();
         if (data.success) {
             showNotification(`"${title}" deleted`);
             await loadRegMgmt();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error!', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
-// Load registrations on page load and poll every 5 seconds
 loadRegMgmt();
 setInterval(loadRegMgmt, 5000);
 
@@ -906,26 +1621,20 @@ async function openRegistrantsModal(regId, title) {
     document.getElementById('registrantsModalTitle').textContent = title;
     document.getElementById('registrantsModalBody').innerHTML = '<p class="registrants-loading">Loading…</p>';
     document.getElementById('registrantsModal').style.display = 'flex';
-
     try {
         const res = await fetch(`/api/registrations/${regId}/entries/`);
         const data = await res.json();
         currentRegistrantsCanDelete = IS_SUPERUSER || data.created_by_id === CURRENT_USER_ID;
         renderRegistrantsList(data.entries);
     } catch (e) {
-        document.getElementById('registrantsModalBody').innerHTML =
-            '<p class="registrants-error">Failed to load registrants.</p>';
+        document.getElementById('registrantsModalBody').innerHTML = '<p class="registrants-error">Failed to load registrants.</p>';
     }
 }
 
 function renderRegistrantsList(entries) {
     const body = document.getElementById('registrantsModalBody');
     if (!entries || entries.length === 0) {
-        body.innerHTML = `
-            <div class="registrants-empty">
-                <p class="empty-icon">👥</p>
-                <p class="empty-text">No one has registered yet.</p>
-            </div>`;
+        body.innerHTML = `<div class="registrants-empty"><p class="empty-icon">👥</p><p class="empty-text">No one has registered yet.</p></div>`;
         return;
     }
     body.innerHTML = `
@@ -946,9 +1655,7 @@ async function deleteRegistrant(entryId, username) {
     if (!confirm(`Remove "${username}" from this registration?`)) return;
     try {
         const res = await fetch(`/api/registrations/${currentRegistrantsRegId}/entries/delete/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({entry_id: entryId}),
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({entry_id: entryId})
         });
         const data = await res.json();
         if (data.success) {
@@ -957,40 +1664,24 @@ async function deleteRegistrant(entryId, username) {
             const remaining = document.querySelectorAll('#registrantsModalBody .registrant-item');
             const countEl = document.querySelector('#registrantsModalBody .registrants-count');
             if (remaining.length === 0) {
-                document.getElementById('registrantsModalBody').innerHTML = `
-                    <div class="registrants-empty">
-                        <p class="empty-icon">👥</p>
-                        <p class="empty-text">No one has registered yet.</p>
-                    </div>`;
+                document.getElementById('registrantsModalBody').innerHTML = `<div class="registrants-empty"><p class="empty-icon">👥</p><p class="empty-text">No one has registered yet.</p></div>`;
             } else if (countEl) {
                 countEl.textContent = `${remaining.length} participant${remaining.length !== 1 ? 's' : ''}`;
-                remaining.forEach((el, i) => {
-                    const numEl = el.querySelector('.registrant-number');
-                    if (numEl) numEl.textContent = i + 1;
-                });
+                remaining.forEach((el, i) => { const n = el.querySelector('.registrant-number'); if (n) n.textContent = i + 1; });
             }
             await loadRegMgmt();
-        } else {
-            showNotification(data.message, 'error');
-        }
-    } catch (e) {
-        showNotification('Connection error!', 'error');
-    }
+        } else { showNotification(data.message, 'error'); }
+    } catch (e) { showNotification('Connection error!', 'error'); }
 }
 
-function closeRegistrantsModal() {
-    document.getElementById('registrantsModal').style.display = 'none';
-}
-
-function handleRegistrantsOverlayClick(e) {
-    if (e.target === document.getElementById('registrantsModal')) closeRegistrantsModal();
-}
+function closeRegistrantsModal() { document.getElementById('registrantsModal').style.display = 'none'; }
+function handleRegistrantsOverlayClick(e) { if (e.target === document.getElementById('registrantsModal')) closeRegistrantsModal(); }
 
 // ===== NOTIFICATION =====
 
 function showNotification(message, type = 'success') {
     const n = document.createElement('div');
-    n.className = `notification ${type}`;
+    n.className = `ha-notif ${type}`;
     n.textContent = message;
     document.body.appendChild(n);
     setTimeout(() => n.remove(), 3000);
