@@ -43,7 +43,7 @@ body {
     position: relative;
 }
 
-.glow-text h1 {
+.glow-text h2 {
     font-size: 3.5rem;
     font-weight: 900;
     color: #FF006E;
@@ -78,6 +78,40 @@ body {
     0% { background-position: -1000px 0; }
     100% { background-position: 1000px 0; }
 }
+
+/* ===== TOP NAV ===== */
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0 20px 0;
+}
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.nav-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+.nav-title {
+    font-weight: 800;
+    color: white;
+    letter-spacing: 1px;
+}
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.nav-link { color: rgba(255,255,255,0.9); text-decoration: none; font-weight:700; }
+.nav-user { color: rgba(255,255,255,0.75); }
+.nav-btn-logout { background: transparent; border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 12px; color: rgba(255,255,255,0.9); text-decoration: none; }
+
 
 /* ===== BUTTONS ===== */
 
@@ -227,8 +261,8 @@ body {
 }
 
 .compact-action-card {
-    padding: 16px 18px;
-    max-width: 420px;
+    padding: 10px 14px;
+    max-width: 100%;
 }
 
 .compact-action-card .card-header {
@@ -236,21 +270,86 @@ body {
     padding-bottom: 12px;
 }
 
+.lineup-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(131, 56, 236, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.lineup-user-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 0, 110, 0.2);
+    border-radius: 12px;
+}
+
+.section-subtitle {
+    margin: 8px 0 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.65);
+    max-width: 450px;
+}
+
+.subsection-header {
+    margin-bottom: 16px;
+}
+
+.subsection-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: white;
+}
+
+
 .compact-action-card .card-title {
     font-size: 1.15rem;
 }
 
 .compact-action-card .input-section {
-    gap: 14px;
+    gap: 8px;
 }
 
 .compact-action-card .welcome-text {
-    font-size: 0.95rem;
+    font-size: 0.78rem;
+}
+
+.btn-small {
+    padding: 5px 12px;
+    font-size: 0.75rem;
+    letter-spacing: 0.4px;
+    min-width: 0;
+    border-radius: 12px;
+}
+
+.btn-small .btn-icon {
+    font-size: 0.85rem;
 }
 
 .compact-action-card .btn-large {
     padding: 14px 28px;
     font-size: 1rem;
+}
+
+.lineup-panel .action-state {
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.lineup-panel .status-badge {
+    width: 100%;
+    padding: 7px 10px;
+}
+
+.lineup-panel .status-text {
+    margin: 0;
+    font-size: 0.8rem;
 }
 
 .action-card {
@@ -262,6 +361,15 @@ body {
     border-color: rgba(255, 0, 110, 0.4);
     background: linear-gradient(135deg, rgba(255, 0, 110, 0.12), rgba(131, 56, 236, 0.12));
     box-shadow: 0 12px 40px rgba(255, 0, 110, 0.2);
+}
+
+.lineup-panel .action-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.lineup-panel .action-card .btn {
+    width: auto;
 }
 
 .card-header {
@@ -504,10 +612,10 @@ body {
 }
 
 .welcome-text {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.75);
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.4;
 }
 
 .welcome-text strong {
@@ -522,8 +630,8 @@ body {
 }
 
 .action-hint {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
     margin: 0;
 }
 
@@ -548,21 +656,21 @@ body {
 .status-badge {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 20px;
+    gap: 8px;
+    padding: 7px 10px;
     background: rgba(6, 255, 165, 0.1);
     border: 1px solid rgba(6, 255, 165, 0.3);
-    border-radius: 12px;
+    border-radius: 8px;
     animation: slideIn 0.4s ease-out;
 }
 
 .status-icon {
-    font-size: 1.8rem;
+    font-size: 1rem;
     animation: bounce 1s ease-in-out infinite;
 }
 
 .status-text {
-    font-size: 1.05rem;
+    font-size: 0.8rem;
     color: #06FFA5;
     font-weight: 600;
     margin: 0;
@@ -576,6 +684,13 @@ body {
 .queue-panel {
     background: linear-gradient(135deg, rgba(58, 134, 255, 0.08), rgba(131, 56, 236, 0.08));
     border: 1px solid rgba(58, 134, 255, 0.2);
+}
+
+.participant-queue-panel {
+    background: linear-gradient(135deg, rgba(58, 134, 255, 0.06), rgba(131, 56, 236, 0.06));
+    border: 1px solid rgba(58, 134, 255, 0.15);
+    border-radius: 16px;
+    padding: 20px;
 }
 
 .in-queue-status {
@@ -709,6 +824,95 @@ body {
     margin: 0;
     line-height: 1.4;
 }
+
+/* ===== REGISTRATION CARDS ===== */
+.reg-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 16px;
+    border-radius: 12px;
+    transition: var(--transition);
+}
+.reg-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(131,56,236,0.25);
+    background: rgba(131,56,236,0.03);
+}
+.reg-card-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: white;
+}
+.reg-card-description {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.95rem;
+}
+.reg-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.reg-count-badge {
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+}
+.btn-register, .btn-unregister {
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+}
+.btn-register {
+    background: linear-gradient(135deg,#06FFA5,#00E699);
+    color: #081217;
+}
+.btn-unregister {
+    background: rgba(255,255,255,0.03);
+    color: #FF006E;
+    border: 1px solid rgba(255,0,110,0.12);
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 1120px) {
+    .container { padding: 18px; }
+    .glow-text h2 { font-size: 2.4rem; }
+    .main-grid { grid-template-columns: 1fr; }
+    .main-grid { gap: 18px; }
+    .card-header { margin-bottom: 18px; }
+}
+
+@media (max-width: 720px) {
+    .nav-brand .nav-title { display: none; }
+    .nav-actions { gap: 8px; }
+    .glow-text h2 { font-size: 1.8rem; }
+    .subtitle { font-size: 1rem; }
+    .queue-number { width: 40px; height: 40px; font-size: 1rem; }
+    .queue-container { max-height: calc(100vh - 260px); min-height: 200px; }
+    .queue-item { padding: 12px; gap: 12px; }
+    .queue-name { font-size: 0.98rem; }
+    .btn { padding: 10px 14px; }
+    .btn-small { min-width: 100px; }
+    .container { max-width: 100%; padding-left: 14px; padding-right: 14px; }
+    .card-title { font-size: 1.05rem; }
+    .status-badge { padding: 12px; }
+    .participant-panel { padding: 18px; border-radius: 14px; }
+}
+
+/* Smooth truncation for long names */
+.queue-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Registrations grid layout */
+.registrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
 
 /* ===== HOST PAGE ===== */
 
@@ -957,6 +1161,16 @@ body {
     z-index: 100;
 }
 
+.nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    gap: 12px;
+}
+
 .nav-brand {
     display: flex;
     align-items: center;
@@ -1055,7 +1269,7 @@ body {
     margin-bottom: 32px;
 }
 
-.auth-header .glow-text h1 {
+.auth-header .glow-text h2 {
     font-size: 2.5rem;
     margin-bottom: 8px;
     animation: none;
@@ -1239,13 +1453,25 @@ body {
     overflow: hidden;
 }
 
-.card-title {
+.admin-card .card-title {
     font-size: 1rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.8);
     margin-bottom: 16px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.participant-panel .card-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FF006E, #8338EC);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .card-title-row {
@@ -2203,7 +2429,7 @@ body {
 }
 
 @media (max-width: 768px) {
-    .glow-text h1 {
+    .glow-text h2 {
         font-size: 2.5rem;
     }
 
@@ -2252,7 +2478,7 @@ body {
 }
 
 @media (max-width: 480px) {
-    .glow-text h1 {
+    .glow-text h2 {
         font-size: 1.8rem;
     }
 

@@ -5,22 +5,23 @@
 
 {% block content %}
 <nav class="top-nav">
-    <div class="nav-brand">
-        <img src="{% static 'images/rng_logo.png' %}" class="nav-logo" alt="RNB Logo">
-        <span class="nav-title">RNB Lineup</span>
-    </div>
-    <div class="nav-actions">
-        {% if request.user.is_staff %}<a href="{% url 'lineup:host' %}" class="nav-link">👨‍💼 Admin</a>{% endif %}
-        <span class="nav-user">👤 {{ request.user.username }}</span>
-        <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
+    <div class="nav-inner">
+        <div class="nav-brand">
+            <img src="{% static 'images/rng_logo.png' %}" class="nav-logo" alt="RNB Logo">
+            <span class="nav-title">RNB Lineup</span>
+        </div>
+        <div class="nav-actions">
+            {% if request.user.is_staff %}<a href="{% url 'lineup:host' %}" class="nav-link">👨‍💼 Admin</a>{% endif %}
+            <span class="nav-user">👤 {{ request.user.username }}</span>
+            <a href="{% url 'lineup:logout' %}" class="nav-btn-logout">Logout</a>
+        </div>
     </div>
 </nav>
 
 <div class="container">
     <header class="header">
         <div class="glow-text">
-            <h1>🎵 RHYTHM N BOOST 🎵</h1>
-            <p class="subtitle">Your Performance Awaits</p>
+            <h2>🎵 RHYTHM N BOOST 🎵</h2>
         </div>
     </header>
 
@@ -40,16 +41,17 @@
         </div>
 
         <div class="right-column">
-            <div class="participant-panel action-card compact-action-card">
-                <div class="card-header">
-                    <h3 class="card-title">Ready to Perform?</h3>
+            <div class="participant-panel lineup-panel">
+                <div class="subsection-header">
+                    <h4 class="subsection-title">✨ Current Lineup <span class="queue-count-badge" id="queueCount">{{ queue.count }}</span></h4>
                 </div>
-                <div class="input-section">
+
+                <div class="lineup-user-section">
                     <p class="welcome-text">Hey <strong>{{ request.user.username }}</strong>! 👋</p>
 
                     <div id="not-in-queue-section" class="action-state" {% if user_in_queue %}style="display:none"{% endif %}>
                         <p class="action-hint">Join the lineup and show us what you got!</p>
-                        <button class="btn btn-primary btn-large btn-raise-hand" onclick="raiseHand()">
+                        <button class="btn btn-primary btn-small btn-raise-hand" onclick="raiseHand()">
                             <span class="btn-icon">🖐️</span> RAISE YOUR HAND
                         </button>
                     </div>
@@ -59,20 +61,12 @@
                             <span class="status-icon" id="statusIcon">✅</span>
                             <p class="status-text" id="queueStatusText">{% if user_in_queue and user_in_queue.is_on_hold %}You're on hold — spot saved!{% else %}You're in the lineup!{% endif %}</p>
                         </div>
-                        <button class="btn btn-danger" onclick="leaveQueue()">
+                        <button class="btn btn-danger btn-small" onclick="leaveQueue()">
                             <span class="btn-icon">🚪</span> LEAVE QUEUE
                         </button>
                     </div>
-
-                    <div id="message" class="message"></div>
                 </div>
-            </div>
 
-            <div class="participant-panel queue-panel">
-                <div class="card-header">
-                    <h3 class="card-title">✨ Current Lineup</h3>
-                    <span class="queue-count-badge" id="queueCount">{{ queue.count }}</span>
-                </div>
                 <div class="queue-container">
                     <ol id="queueList" class="queue-list">
                         {% for participant in queue %}
@@ -103,6 +97,7 @@
                         {% endfor %}
                     </ol>
                 </div>
+
                 <div class="info-section">
                     <p class="info-text">💡 Raise your hand to join the queue and wait for your turn!</p>
                 </div>
