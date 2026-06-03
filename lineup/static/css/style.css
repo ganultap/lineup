@@ -46,6 +46,7 @@ body {
 .glow-text h1 {
     font-size: 3.5rem;
     font-weight: 900;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #8338EC, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -94,6 +95,7 @@ body {
     gap: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-icon {
@@ -164,9 +166,9 @@ body {
 .input-field {
     width: 100%;
     padding: 16px 20px;
-    border: 2px solid transparent;
+    border: 2px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--border-radius);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--light);
     font-family: 'Poppins', sans-serif;
     font-size: 1.1rem;
@@ -178,12 +180,13 @@ body {
 .input-field:focus {
     outline: none;
     border-color: #FF006E;
-    background: rgba(255, 0, 110, 0.1);
-    box-shadow: 0 0 20px rgba(255, 0, 110, 0.2);
+    background: rgba(255, 0, 110, 0.12);
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.3);
 }
 
 .input-field::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 400;
 }
 
 /* ===== PARTICIPANT PAGE ===== */
@@ -241,6 +244,7 @@ body {
 .queue-title {
     font-size: 1.8rem;
     margin-bottom: 20px;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -267,11 +271,12 @@ body {
     align-items: center;
     gap: 15px;
     padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(131, 56, 236, 0.2), rgba(58, 134, 255, 0.2));
+    background: linear-gradient(135deg, rgba(131, 56, 236, 0.15), rgba(58, 134, 255, 0.15));
     border-left: 4px solid #FF006E;
     border-radius: 10px;
     animation: slideIn 0.3s ease-out;
     transition: var(--transition);
+    border: 1px solid rgba(131, 56, 236, 0.2);
 }
 
 .queue-item:hover {
@@ -408,6 +413,7 @@ body {
 .performer-name {
     font-size: 2rem;
     font-weight: 900;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #8338EC);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -433,6 +439,7 @@ body {
 .panel-title {
     font-size: 1.5rem;
     margin-bottom: 20px;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -452,10 +459,11 @@ body {
     align-items: center;
     gap: 15px;
     padding: 15px 20px;
-    background: linear-gradient(135deg, rgba(131, 56, 236, 0.2), rgba(58, 134, 255, 0.2));
+    background: linear-gradient(135deg, rgba(131, 56, 236, 0.15), rgba(58, 134, 255, 0.15));
     border-left: 4px solid #06FFA5;
     border-radius: 10px;
     transition: var(--transition);
+    border: 1px solid rgba(131, 56, 236, 0.2);
 }
 
 .queue-card:hover {
@@ -548,6 +556,7 @@ body {
 .stat-value {
     font-size: 2.5rem;
     font-weight: 900;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #8338EC);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -626,6 +635,7 @@ body {
 .nav-title {
     font-weight: 700;
     font-size: 1.1rem;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #8338EC);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -639,15 +649,17 @@ body {
 }
 
 .nav-link {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.75);
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 500;
     transition: var(--transition);
+    border-bottom: 1px solid transparent;
 }
 
 .nav-link:hover {
     color: #fff;
+    border-bottom-color: rgba(255, 255, 255, 0.3);
 }
 
 .nav-user {
@@ -702,6 +714,7 @@ body {
     font-size: 2.5rem;
     margin-bottom: 8px;
     animation: none;
+    color: #FF006E;
 }
 
 .auth-subtitle {
@@ -766,14 +779,16 @@ body {
 }
 
 .auth-link a {
-    color: #8338EC;
+    color: #3A86FF;
     text-decoration: none;
     font-weight: 600;
     transition: var(--transition);
+    border-bottom: 1px solid transparent;
 }
 
 .auth-link a:hover {
     color: #FF006E;
+    border-bottom-color: #FF006E;
 }
 
 /* ===== ADMIN PANEL ===== */
@@ -790,6 +805,7 @@ body {
 .admin-title {
     font-size: 2.5rem;
     font-weight: 900;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #8338EC, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -857,6 +873,7 @@ body {
 .section-title {
     font-size: 1.3rem;
     font-weight: 700;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1261,6 +1278,7 @@ body {
 .registrations-heading {
     font-size: 1.8rem;
     margin-bottom: 24px;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1415,6 +1433,7 @@ body {
 .reg-mgmt-title {
     font-size: 1.3rem;
     font-weight: 700;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #3A86FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1532,6 +1551,7 @@ body {
 .modal-title {
     font-size: 1.3rem;
     font-weight: 700;
+    color: #FF006E;
     background: linear-gradient(135deg, #FF006E, #8338EC);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
