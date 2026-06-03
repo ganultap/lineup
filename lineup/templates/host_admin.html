@@ -96,6 +96,76 @@
         </div>
     </div>
 
+    <!-- REGISTRATIONS SECTION (Admin + Host) -->
+    <div class="reg-mgmt-divider">
+        <span class="reg-mgmt-divider-text">📋 REGISTRATIONS</span>
+    </div>
+
+    <div class="reg-mgmt-section">
+        <div class="reg-mgmt-header">
+            <h2 class="reg-mgmt-title">Registration Events</h2>
+            <button class="btn btn-primary" onclick="openRegModal()">+ Add Registration</button>
+        </div>
+        <div id="regMgmtList" class="reg-mgmt-grid">
+            <div class="reg-empty-state">
+                <p class="empty-icon">📝</p>
+                <p class="empty-text">No registrations yet. Click "Add Registration" to create one.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTRATION MODAL -->
+    <div id="registrationModal" class="modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Registrations</h3>
+                <button class="modal-close-btn" onclick="closeRegModal()">✕</button>
+            </div>
+            <div id="regRowsList" class="reg-rows-list"></div>
+            <button class="btn-add-row" onclick="addRegRow()">+ Add Row</button>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveRegistrations()">Save</button>
+                <button class="btn btn-outline" onclick="closeRegModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTRANTS MODAL -->
+    <div id="registrantsModal" class="modal-overlay" style="display:none;" onclick="handleRegistrantsOverlayClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title" id="registrantsModalTitle">Registrants</h3>
+                <button class="modal-close-btn" onclick="closeRegistrantsModal()">✕</button>
+            </div>
+            <div id="registrantsModalBody" class="registrants-list"></div>
+        </div>
+    </div>
+
+    <!-- EDIT REGISTRATION MODAL -->
+    <div id="editRegModal" class="modal-overlay" style="display:none;" onclick="handleEditModalOverlayClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Registration</h3>
+                <button class="modal-close-btn" onclick="closeEditRegModal()">✕</button>
+            </div>
+            <div class="edit-reg-form">
+                <input type="hidden" id="editRegId">
+                <div class="edit-field">
+                    <label class="edit-label">Title <span class="required-star">*</span></label>
+                    <input type="text" id="editRegTitle" class="input-field" placeholder="Registration title">
+                </div>
+                <div class="edit-field">
+                    <label class="edit-label">Description <span class="optional-note">(optional)</span></label>
+                    <input type="text" id="editRegDescription" class="input-field" placeholder="Details or description">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveEditRegistration()">Save Changes</button>
+                <button class="btn btn-outline" onclick="closeEditRegModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     {% if request.user.is_superuser %}
     <!-- ADMIN MANAGEMENT SECTION -->
     <div class="admin-divider">
@@ -606,6 +676,245 @@ function switchAdminTab(tab, btn) {
 }
 
 {% endif %}
+
+// ===== REGISTRATIONS MANAGEMENT =====
+
+const IS_SUPERUSER = {% if request.user.is_superuser %}true{% else %}false{% endif %};
+const CURRENT_USER_ID = {{ request.user.id }};
+
+async function loadRegMgmt() {
+    try {
+        const res = await fetch('/api/registrations/');
+        const data = await res.json();
+        renderRegMgmtList(data.registrations);
+    } catch (e) {
+        console.error('Reg mgmt load error:', e);
+    }
+}
+
+function renderRegMgmtList(registrations) {
+    const el = document.getElementById('regMgmtList');
+    if (!registrations || registrations.length === 0) {
+        el.innerHTML = `
+            <div class="reg-empty-state">
+                <p class="empty-icon">📝</p>
+                <p class="empty-text">No registrations yet. Click "Add Registration" to create one.</p>
+            </div>`;
+        return;
+    }
+    el.innerHTML = registrations.map(reg => {
+        const canEdit = IS_SUPERUSER || reg.created_by_id === CURRENT_USER_ID;
+        return `
+        <div class="reg-mgmt-card" id="reg-mgmt-${reg.id}">
+            <div class="reg-mgmt-card-body">
+                <h4 class="reg-mgmt-card-title">${esc(reg.title)}</h4>
+                ${reg.description ? `<p class="reg-mgmt-card-desc">${esc(reg.description)}</p>` : ''}
+                <div class="reg-mgmt-card-meta">
+                    <button class="reg-count-pill" onclick="openRegistrantsModal(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}')">👥 ${reg.count} registered</button>
+                    <span class="reg-creator-tag">by ${esc(reg.created_by)}</span>
+                </div>
+            </div>
+            ${canEdit ? `
+            <div class="reg-mgmt-card-actions">
+                <button class="btn-sm btn-outline" onclick="openEditRegModal(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}', '${esc(reg.description).replace(/'/g, "\\'")}')">Edit</button>
+                <button class="btn-sm btn-danger" onclick="deleteRegistration(${reg.id}, '${esc(reg.title).replace(/'/g, "\\'")}')">Delete</button>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+// Modal open/close
+function openRegModal() {
+    const rowsList = document.getElementById('regRowsList');
+    rowsList.innerHTML = '';
+    addRegRow();
+    document.getElementById('registrationModal').style.display = 'flex';
+}
+
+function closeRegModal() {
+    document.getElementById('registrationModal').style.display = 'none';
+}
+
+function handleModalOverlayClick(e) {
+    if (e.target === document.getElementById('registrationModal')) closeRegModal();
+}
+
+let regRowCount = 0;
+
+function addRegRow() {
+    const id = ++regRowCount;
+    const row = document.createElement('div');
+    row.className = 'reg-row';
+    row.id = 'reg-row-' + id;
+    row.innerHTML = `
+        <div class="reg-row-inputs">
+            <input type="text" class="input-field reg-row-title" placeholder="Title (required)" required>
+            <input type="text" class="input-field reg-row-desc" placeholder="Description (optional)">
+        </div>
+        <button class="reg-row-remove" onclick="removeRegRow(${id})" title="Remove">✕</button>`;
+    document.getElementById('regRowsList').appendChild(row);
+}
+
+function removeRegRow(id) {
+    const row = document.getElementById('reg-row-' + id);
+    if (row) row.remove();
+}
+
+async function saveRegistrations() {
+    const rows = document.querySelectorAll('#regRowsList .reg-row');
+    const items = [];
+    let valid = true;
+    rows.forEach(row => {
+        const title = row.querySelector('.reg-row-title').value.trim();
+        const description = row.querySelector('.reg-row-desc').value.trim();
+        if (title) {
+            items.push({title, description});
+        } else {
+            row.querySelector('.reg-row-title').style.borderColor = '#FF006E';
+            valid = false;
+        }
+    });
+
+    if (!items.length) {
+        showNotification('At least one registration with a title is required.', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/registrations/create/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({items}),
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`Created ${data.registrations.length} registration(s)!`);
+            closeRegModal();
+            await loadRegMgmt();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error!', 'error');
+    }
+}
+
+// Edit modal
+function openEditRegModal(id, title, description) {
+    document.getElementById('editRegId').value = id;
+    document.getElementById('editRegTitle').value = title;
+    document.getElementById('editRegDescription').value = description;
+    document.getElementById('editRegModal').style.display = 'flex';
+}
+
+function closeEditRegModal() {
+    document.getElementById('editRegModal').style.display = 'none';
+}
+
+function handleEditModalOverlayClick(e) {
+    if (e.target === document.getElementById('editRegModal')) closeEditRegModal();
+}
+
+async function saveEditRegistration() {
+    const id = document.getElementById('editRegId').value;
+    const title = document.getElementById('editRegTitle').value.trim();
+    const description = document.getElementById('editRegDescription').value.trim();
+
+    if (!title) {
+        showNotification('Title is required.', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/registrations/edit/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id, title, description}),
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification('Registration updated!');
+            closeEditRegModal();
+            await loadRegMgmt();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error!', 'error');
+    }
+}
+
+async function deleteRegistration(id, title) {
+    if (!confirm(`Delete registration "${title}"? This cannot be undone.`)) return;
+    try {
+        const res = await fetch('/api/registrations/delete/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id}),
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification(`"${title}" deleted`);
+            await loadRegMgmt();
+        } else {
+            showNotification(data.message, 'error');
+        }
+    } catch (e) {
+        showNotification('Connection error!', 'error');
+    }
+}
+
+// Load registrations on page load and poll every 5 seconds
+loadRegMgmt();
+setInterval(loadRegMgmt, 5000);
+
+// ===== REGISTRANTS MODAL =====
+
+async function openRegistrantsModal(regId, title) {
+    document.getElementById('registrantsModalTitle').textContent = title;
+    document.getElementById('registrantsModalBody').innerHTML = '<p class="registrants-loading">Loading…</p>';
+    document.getElementById('registrantsModal').style.display = 'flex';
+
+    try {
+        const res = await fetch(`/api/registrations/${regId}/entries/`);
+        const data = await res.json();
+        renderRegistrantsList(data.entries);
+    } catch (e) {
+        document.getElementById('registrantsModalBody').innerHTML =
+            '<p class="registrants-error">Failed to load registrants.</p>';
+    }
+}
+
+function renderRegistrantsList(entries) {
+    const body = document.getElementById('registrantsModalBody');
+    if (!entries || entries.length === 0) {
+        body.innerHTML = `
+            <div class="registrants-empty">
+                <p class="empty-icon">👥</p>
+                <p class="empty-text">No one has registered yet.</p>
+            </div>`;
+        return;
+    }
+    body.innerHTML = `
+        <p class="registrants-count">${entries.length} participant${entries.length !== 1 ? 's' : ''}</p>
+        <ul class="registrants-list-items">
+            ${entries.map((e, i) => `
+                <li class="registrant-item">
+                    <span class="registrant-number">${i + 1}</span>
+                    <span class="registrant-name">${esc(e.username)}</span>
+                    <span class="registrant-time">${esc(e.registered_at)}</span>
+                </li>
+            `).join('')}
+        </ul>`;
+}
+
+function closeRegistrantsModal() {
+    document.getElementById('registrantsModal').style.display = 'none';
+}
+
+function handleRegistrantsOverlayClick(e) {
+    if (e.target === document.getElementById('registrantsModal')) closeRegistrantsModal();
+}
 
 // ===== NOTIFICATION =====
 

@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import json
-from .models import Session, Participant
+from .models import Session, Participant, EventRegistration, EventRegistrationEntry
 
 
 @login_required
@@ -410,3 +410,202 @@ def remove_participant(request):
         return JsonResponse({'success': False, 'message': 'Participant not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
+
+# ===== REGISTRATION VIEWS =====
+
+@require_http_methods(["GET"])
+def get_registrations(request):
+    """Get all active registrations with counts and user registration status"""
+    regs = EventRegistration.objects.filter(is_active=True).order_by('-created_at')
+
+    user_registered_ids = set()
+    if request.user.is_authenticated:
+        user_registered_ids = set(
+            EventRegistrationEntry.objects.filter(user=request.user)
+            .values_list('registration_id', flat=True)
+        )
+
+    result = []
+    for reg in regs:
+        result.append({
+            'id': reg.id,
+            'title': reg.title,
+            'description': reg.description,
+            'count': reg.entries.count(),
+            'registered': reg.id in user_registered_ids,
+            'created_by': reg.created_by.username,
+            'created_by_id': reg.created_by_id,
+        })
+
+    return JsonResponse({'registrations': result})
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_registrations(request):
+    """Batch-create registrations (Admin or Host)"""
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+
+    data = json.loads(request.body)
+    items = data.get('items', [])
+
+    if not items:
+        return JsonResponse({'success': False, 'message': 'At least one registration is required.'})
+
+    created = []
+    for item in items:
+        title = item.get('title', '').strip()
+        description = item.get('description', '').strip()
+        if not title:
+            continue
+        reg = EventRegistration.objects.create(
+            title=title,
+            description=description,
+            created_by=request.user,
+        )
+        created.append({
+            'id': reg.id,
+            'title': reg.title,
+            'description': reg.description,
+            'count': 0,
+            'registered': False,
+            'created_by': request.user.username,
+            'created_by_id': request.user.id,
+        })
+
+    if not created:
+        return JsonResponse({'success': False, 'message': 'No valid registrations provided.'})
+
+    return JsonResponse({'success': True, 'registrations': created})
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def edit_registration(request):
+    """Edit a registration (Admin: any; Host: own only)"""
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+
+    data = json.loads(request.body)
+    reg_id = data.get('id')
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+
+    if not title:
+        return JsonResponse({'success': False, 'message': 'Title is required.'})
+
+    try:
+        reg = EventRegistration.objects.get(id=reg_id)
+    except EventRegistration.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Registration not found.'})
+
+    if not request.user.is_superuser and reg.created_by != request.user:
+        return JsonResponse({'success': False, 'message': 'You can only edit your own registrations.'}, status=403)
+
+    reg.title = title
+    reg.description = description
+    reg.save()
+
+    return JsonResponse({'success': True, 'registration': {
+        'id': reg.id,
+        'title': reg.title,
+        'description': reg.description,
+    }})
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_registration(request):
+    """Delete a registration (Admin: any; Host: own only)"""
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+
+    data = json.loads(request.body)
+    reg_id = data.get('id')
+
+    try:
+        reg = EventRegistration.objects.get(id=reg_id)
+    except EventRegistration.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Registration not found.'})
+
+    if not request.user.is_superuser and reg.created_by != request.user:
+        return JsonResponse({'success': False, 'message': 'You can only delete your own registrations.'}, status=403)
+
+    reg.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def register_for_event(request):
+    """User registers for a specific event"""
+    data = json.loads(request.body)
+    reg_id = data.get('id')
+
+    try:
+        reg = EventRegistration.objects.get(id=reg_id, is_active=True)
+    except EventRegistration.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Registration not found.'})
+
+    if EventRegistrationEntry.objects.filter(registration=reg, user=request.user).exists():
+        return JsonResponse({'success': False, 'message': 'Already registered!'})
+
+    EventRegistrationEntry.objects.create(registration=reg, user=request.user)
+    count = reg.entries.count()
+    return JsonResponse({'success': True, 'count': count})
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def unregister_from_event(request):
+    """User unregisters from a specific event"""
+    data = json.loads(request.body)
+    reg_id = data.get('id')
+
+    try:
+        entry = EventRegistrationEntry.objects.get(registration_id=reg_id, user=request.user)
+        entry.delete()
+        count = EventRegistration.objects.get(id=reg_id).entries.count()
+        return JsonResponse({'success': True, 'count': count})
+    except EventRegistrationEntry.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Not registered.'})
+    except EventRegistration.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Registration not found.'})
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_registration_entries(request, reg_id):
+    """Return the list of users registered for a specific event (staff only)"""
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    try:
+        reg = EventRegistration.objects.get(id=reg_id)
+    except EventRegistration.DoesNotExist:
+        return JsonResponse({'error': 'Registration not found.'}, status=404)
+
+    entries = (
+        EventRegistrationEntry.objects
+        .filter(registration=reg)
+        .select_related('user')
+        .order_by('registered_at')
+    )
+
+    return JsonResponse({
+        'title': reg.title,
+        'entries': [
+            {
+                'username': e.user.username,
+                'registered_at': e.registered_at.strftime('%b %d, %Y %H:%M'),
+            }
+            for e in entries
+        ],
+    })

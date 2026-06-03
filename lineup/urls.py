@@ -23,4 +23,11 @@ urlpatterns = [
     path('api/full-state/', views.full_state, name='full_state'),
     path('api/admin-state/', views.admin_state, name='admin_state'),
     path('api/remove/', views.remove_participant, name='remove_participant'),
+    path('api/registrations/', views.get_registrations, name='get_registrations'),
+    path('api/registrations/create/', views.create_registrations, name='create_registrations'),
+    path('api/registrations/edit/', views.edit_registration, name='edit_registration'),
+    path('api/registrations/delete/', views.delete_registration, name='delete_registration'),
+    path('api/registrations/register/', views.register_for_event, name='register_for_event'),
+    path('api/registrations/unregister/', views.unregister_from_event, name='unregister_from_event'),
+    path('api/registrations/<int:reg_id>/entries/', views.get_registration_entries, name='get_registration_entries'),
 ]

@@ -67,6 +67,16 @@
             <p class="info-text">💡 Raise your hand to join the queue and wait for your turn to perform!</p>
         </div>
     </div>
+
+    <div class="registrations-wrapper">
+        <h2 class="registrations-heading">📋 Registrations</h2>
+        <div id="registrationCards" class="registrations-grid">
+            <div class="reg-empty-state">
+                <p class="empty-icon">📝</p>
+                <p class="empty-text">No registrations available yet.</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -171,5 +181,95 @@
             console.error('Error fetching queue:', error);
         }
     }, 2000);
+
+    // ===== REGISTRATIONS =====
+
+    async function loadRegistrations() {
+        try {
+            const res = await fetch('/api/registrations/');
+            const data = await res.json();
+            renderRegistrationCards(data.registrations);
+        } catch (e) {
+            console.error('Error fetching registrations:', e);
+        }
+    }
+
+    function renderRegistrationCards(registrations) {
+        const container = document.getElementById('registrationCards');
+        if (!registrations || registrations.length === 0) {
+            container.innerHTML = `
+                <div class="reg-empty-state">
+                    <p class="empty-icon">📝</p>
+                    <p class="empty-text">No registrations available yet.</p>
+                </div>`;
+            return;
+        }
+        container.innerHTML = registrations.map(reg => `
+            <div class="reg-card" id="reg-card-${reg.id}">
+                <div class="reg-card-body">
+                    <h3 class="reg-card-title">${esc(reg.title)}</h3>
+                    ${reg.description ? `<p class="reg-card-description">${esc(reg.description)}</p>` : ''}
+                </div>
+                <div class="reg-card-footer">
+                    <span class="reg-count-badge" id="reg-count-${reg.id}">
+                        👥 <span>${reg.count}</span> registered
+                    </span>
+                    ${reg.registered
+                        ? `<button class="btn-unregister" onclick="unregisterFromEvent(${reg.id})">✓ Registered</button>`
+                        : `<button class="btn-register" onclick="registerForEvent(${reg.id})">Register</button>`
+                    }
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function esc(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    async function registerForEvent(regId) {
+        try {
+            const res = await fetch('/api/registrations/register/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: regId}),
+            });
+            const data = await res.json();
+            if (data.success) {
+                showMessage('✅ Registered successfully!', 'success');
+                await loadRegistrations();
+            } else {
+                showMessage(data.message, 'error');
+            }
+        } catch (e) {
+            showMessage('Connection error!', 'error');
+        }
+    }
+
+    async function unregisterFromEvent(regId) {
+        if (!confirm('Cancel your registration?')) return;
+        try {
+            const res = await fetch('/api/registrations/unregister/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: regId}),
+            });
+            const data = await res.json();
+            if (data.success) {
+                showMessage('Registration cancelled.', 'success');
+                await loadRegistrations();
+            } else {
+                showMessage(data.message, 'error');
+            }
+        } catch (e) {
+            showMessage('Connection error!', 'error');
+        }
+    }
+
+    // Load registrations on page load and poll every 3 seconds
+    loadRegistrations();
+    setInterval(loadRegistrations, 3000);
 </script>
 {% endblock %}
